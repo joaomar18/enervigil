@@ -1,0 +1,9 @@
+services:
+  backend:
+    # Example serial device mapping for Modbus RTU
+    devices:
+      - "/dev/ttyAMA0:/dev/ttyAMA0"
+
+    # Example if using USB adapters
+    # devices:
+    #   - "/dev/ttyUSB0:/dev/ttyUSB0"

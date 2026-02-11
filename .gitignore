@@ -1,0 +1,29 @@
+##########     Deployment     ##########
+.env*
+!.env.example
+cert/
+data/
+logs/
+build/
+docker-compose.hardware.yml
+##########     Backend     ##########
+.venv/
+__pycache__/
+.vscode/
+*.pyc
+.pytest_cache
+enervigiledge.egg-info/
+app/data/*
+!app/data/device_img/default.*
+##########     Frontend     ##########
+node_modules
+debug.log
+.output
+.vercel
+.netlify
+.wrangler
+.svelte-kit/
+.DS_Store
+Thumbs.db
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
