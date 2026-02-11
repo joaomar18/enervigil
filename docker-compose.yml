@@ -1,4 +1,11 @@
 services:
+  scripts:
+    build: ./scripts
+    container_name: enervigil-init-scripts
+    environment:
+      - DEVICE_HOSTNAME=${HOSTNAME}
+    volumes:
+      - ./cert:/cert
   influxdb:
     image: influxdb:1.8
     container_name: enervigil-timedb
@@ -19,6 +26,7 @@ services:
       - ./logs/nginx:/var/log/nginx
       - ./cert:/cert:ro
     depends_on:
+      - scripts
       - ui
       - backend
     restart: unless-stopped
@@ -43,11 +51,11 @@ services:
       - TIMEDB_USERNAME=root
       - TIMEDB_PASSWORD=root
       # Paths
-      - DB_PATH=${DB_PATH}
-      - APP_DATA_PATH=${APP_DATA_PATH}
+      - DB_PATH=/var/lib/sqlite
+      - APP_DATA_PATH=/var/lib/enervigil-backend
     volumes:
-      - ./data/sqlite:${DB_PATH}
-      - ./data/app:${APP_DATA_PATH}
+      - ./data/sqlite:/var/lib/sqlite
+      - ./data/app:/var/lib/enervigil-backend
     depends_on:
       - influxdb
     restart: unless-stopped
