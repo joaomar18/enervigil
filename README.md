@@ -46,7 +46,7 @@ Enervigil provides a comprehensive solution for:
 3. **Start the system**
 
    ```bash
-   docker-compose up -d
+   docker compose up -d
    ```
 
    This command will:
@@ -82,7 +82,7 @@ Enervigil provides a comprehensive solution for:
 7. **Stop the system**
 
    ```bash
-   docker-compose down
+   docker compose down
    ```
 
 ## 🔧 Environment Configuration
@@ -122,10 +122,10 @@ For deployments with specific hardware requirements (e.g., direct serial port ac
 If you need to expose hardware devices (for example, serial ports), use the hardware override file:
 
 ```bash
-docker-compose \
-  -f docker-compose.yml \
-  -f docker-compose.hardware.yml \
-  up -d
+docker compose \
+-f docker-compose.yml \
+-f docker-compose.hardware.yml \
+up -d
 ```
 
 This configuration allows you to map serial ports from the host directly to the backend container:
