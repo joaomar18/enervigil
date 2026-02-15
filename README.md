@@ -24,7 +24,7 @@ Enervigil provides a comprehensive solution for:
 - **Docker Compose**: Version 1.29 or higher
 - **Optional**: Hardware with specific network interfaces (see [Hardware Setup](#hardware-setup))
 
-### Installation with Docker Compose
+### Installation with Scripts (Recommended)
 
 1. **Clone or download the repository**
 
@@ -43,20 +43,29 @@ Enervigil provides a comprehensive solution for:
 
    Edit `.env` with your settings (see [Environment Configuration](#environment-configuration) below).
 
-3. **Start the system**
+3. **Script usage by platform**
 
+   - `*.sh` scripts are for **Unix-like systems** (Linux/macOS)
+   - `*.ps1` scripts are for **Windows PowerShell**
+
+4. **Start in production mode**
+
+   **Linux/macOS:**
    ```bash
-   docker compose up -d
+   bash scripts/prod.sh
    ```
 
-   This command will:
-   - Initialize the database schema
-   - Generate TLS certificates
-   - Start all services (backend, frontend, InfluxDB, Nginx reverse proxy)
+   **Windows (PowerShell):**
+   ```powershell
+   ./scripts/prod.ps1
+   ```
 
-   > **Note:** If you need to expose hardware devices (e.g., serial ports), use the hardware configuration described in the [Hardware Setup](#hardware-setup) section.
+   This will:
+   - Stop development containers (if running)
+   - Start the production stack
+   - Automatically include `docker-compose.hardware.yml` when present
 
-4. **Access the system**
+5. **Access the system**
 
    Enervigil will be accessible via:
 
@@ -65,24 +74,75 @@ Enervigil provides a comprehensive solution for:
 
    If `<HOSTNAME>.local` does not resolve on your network, use the device IPv4 address instead.
 
-5. **Check service status**
+6. **Switch environments / stop**
 
+   **Switch to development mode**
+
+   Linux/macOS:
    ```bash
-   docker-compose ps
+   bash scripts/dev.sh
    ```
 
-6. **View logs**
-
-   ```bash
-   docker-compose logs -f backend
-   docker-compose logs -f ui
-   docker-compose logs -f influxdb
+   Windows (PowerShell):
+   ```powershell
+   ./scripts/dev.ps1
    ```
 
-7. **Stop the system**
+   > After switching to development mode, start app processes with:
+   > - `scripts/backend.sh` and `scripts/frontend.sh` (Linux/macOS)
+   > - `scripts/backend.ps1` and `scripts/frontend.ps1` (Windows PowerShell)
+
+   **Switch back to production mode**
+
+   Linux/macOS:
+   ```bash
+   bash scripts/prod.sh
+   ```
+
+   Windows (PowerShell):
+   ```powershell
+   ./scripts/prod.ps1
+   ```
+
+   **Stop everything**
+
+   Linux/macOS:
+   ```bash
+   bash scripts/stop.sh
+   ```
+
+   Windows (PowerShell):
+   ```powershell
+   ./scripts/stop.ps1
+   ```
+
+   **Uninstall (with selective data retention prompts)**
+
+   > Run uninstall scripts with elevated permissions:
+   > - Linux/macOS: `sudo bash scripts/uninstall.sh`
+   > - Windows: run PowerShell as Administrator, then `./scripts/uninstall.ps1`
+
+   The uninstall scripts stop containers and ask if you want to keep or remove:
+   - SQLite/config data (`data/sqlite`)
+   - backend app data (images/admin credentials/etc...) (`data/app`)
+   - InfluxDB measurements (`data/influxdb`)
+   - logs (`logs`)
+   - TLS certificates (`cert`)
+
+   Data deletion requires typing `DELETE` as final confirmation.
+
+7. **Check service status**
 
    ```bash
-   docker compose down
+   docker compose ps
+   ```
+
+8. **View logs**
+
+   ```bash
+   docker compose logs -f backend
+   docker compose logs -f ui
+   docker compose logs -f influxdb
    ```
 
 ## 🔧 Environment Configuration
@@ -119,14 +179,12 @@ For deployments with specific hardware requirements (e.g., direct serial port ac
 
 ### Using docker-compose.hardware.yml
 
-If you need to expose hardware devices (for example, serial ports), use the hardware override file:
+If you need to expose hardware devices (for example, serial ports), configure `docker-compose.hardware.yml` and start production normally with:
 
-```bash
-docker compose \
--f docker-compose.yml \
--f docker-compose.hardware.yml \
-up -d
-```
+- `bash scripts/prod.sh` (Linux/macOS)
+- `./scripts/prod.ps1` (Windows PowerShell)
+
+The production scripts automatically detect and include `docker-compose.hardware.yml` when it exists.
 
 This configuration allows you to map serial ports from the host directly to the backend container:
 
@@ -139,8 +197,6 @@ devices:
 ### Example docker-compose.hardware.yml
 
 ```yaml
-version: '3.8'
-
 services:
   backend:
     devices:
@@ -368,6 +424,8 @@ This project is open source. See the LICENSE file for details.
 
 ## 🐛 Known Issues & Limitations
 
+## 🐛 Known Issues & Limitations
+
 ### Current Limitations
 
 1. **Modbus RTU Port Sharing**: Only one device can use a serial port at a time due to device-owned protocol clients. This will be addressed by implementing shared client pools.
@@ -411,4 +469,4 @@ For questions, discussions, or feature requests:
 
 ---
 
-**Last Updated**: 11 Feb 2026
+**Last Updated**: 15 Feb 2026

@@ -2,6 +2,7 @@
 
 import aiosqlite
 import json
+from pathlib import Path
 from typing import List, Dict, Set, Any, Optional
 
 #################################################
@@ -44,7 +45,11 @@ class SQLiteDBClient:
         if DB_PATH is None:
             raise ValueError("DB Path was not specified in the environment.")
 
-        self.conn = await aiosqlite.connect(f"{DB_PATH}/data.db")
+        db_dir = Path(DB_PATH)
+        db_dir.mkdir(parents=True, exist_ok=True)
+        db_file = db_dir / "data.db"
+
+        self.conn = await aiosqlite.connect(db_file)
         await self.conn.execute("PRAGMA journal_mode=WAL;")  # Enable WAL mode
         await self.conn.execute("PRAGMA foreign_keys=ON;")  # Enable foreign key constraints
         await self.create_tables()

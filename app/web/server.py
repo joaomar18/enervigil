@@ -4,7 +4,6 @@ import asyncio
 import logging
 from typing import Optional
 from fastapi import FastAPI, APIRouter
-from fastapi.middleware.cors import CORSMiddleware
 from uvicorn import Config, Server
 
 #######################################
@@ -166,6 +165,8 @@ class HTTPServer:
 
         if HTTP_PORT is None:
             raise ValueError("HTTP Port was not specified in the environment.")
+
+        print(f"HTTP_PORT: {HTTP_PORT}, HTTP_HOSTNAME: {HTTP_HOSTNAME}")
 
         config = Config(
             app=self.server,
