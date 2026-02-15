@@ -11,7 +11,7 @@ HTTP_HOSTNAME = os.getenv("HTTP_HOSTNAME", "0.0.0.0")
 TIMEDB_HOSTNAME = os.getenv("TIMEDB_HOSTNAME")
 
 # Ports
-HTTP_PORT = os.getenv("HTTP_PORT", "0.0.0.0")
+HTTP_PORT = os.getenv("HTTP_PORT", 8000)
 HTTP_PORT = int(HTTP_PORT) if HTTP_PORT is not None else None
 TIMEDB_PORT = os.getenv("TIMEDB_PORT")
 TIMEDB_PORT = int(TIMEDB_PORT) if TIMEDB_PORT is not None else None

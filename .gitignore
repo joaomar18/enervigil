@@ -1,10 +1,10 @@
 ##########     Deployment     ##########
 .env*
 !.env.example
-cert/
-data/
-logs/
-build/
+/cert/
+/data/
+/logs/
+/build/
 docker-compose.hardware.yml
 ##########     Backend     ##########
 .venv/
@@ -12,11 +12,14 @@ __pycache__/
 .vscode/
 *.pyc
 .pytest_cache
+app/build/
 enervigiledge.egg-info/
 app/data/*
+!app/data/device_img/
 !app/data/device_img/default.*
 ##########     Frontend     ##########
 node_modules
+ui/build/
 debug.log
 .output
 .vercel
