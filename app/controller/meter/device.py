@@ -147,20 +147,14 @@ class EnergyMeter:
         Behavior depends on the connection state:
 
         - If connected:
-            - Reset the disconnection flag
-            - Calculate all node values
-            - Log and publish values concurrently
+            - Calculate nodes
+            - Log and publish values
 
         - If disconnected:
-            - On the first cycle after disconnection:
-                - Perform a calculation pass to propagate None values
-                - Log the resulting values
-                - Set a flag to avoid redundant recalculations
-            - On subsequent cycles:
-                - Skip calculation
-                - Continue logging existing values
+            - Perform a one-time calculation to propagate None values
+            - Continue logging on subsequent cycles
 
-        Publishing only occurs when the meter is connected.
+        Publishing only occurs when connected.
         Logging is always performed.
         """
 
@@ -172,7 +166,7 @@ class EnergyMeter:
             if not self.disconnected_calculation:
                 await self.calculate_nodes()
                 self.disconnected_calculation = True
-                
+
             await self.log_nodes()
 
     async def log_nodes(self) -> None:
