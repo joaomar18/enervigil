@@ -168,11 +168,11 @@ class EnergyMeter:
             self.disconnected_calculation = False
             await self.calculate_nodes()
             await asyncio.gather(self.log_nodes(), self.publish_nodes())
-        elif not self.disconnected_calculation:
-            await self.calculate_nodes()
-            await self.log_nodes()
-            self.disconnected_calculation = True
         else:
+            if not self.disconnected_calculation:
+                await self.calculate_nodes()
+                self.disconnected_calculation = True
+                
             await self.log_nodes()
 
     async def log_nodes(self) -> None:
