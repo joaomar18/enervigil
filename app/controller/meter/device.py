@@ -144,15 +144,24 @@ class EnergyMeter:
     async def process_nodes(self) -> None:
         """
         Executes the full data processing cycle for the energy meter.
+        Behavior depends on the connection state:
 
-        If the meter is connected:
-            - Clears disconnected flag
-            - Calculates all nodes
-            - Logs and publishes values concurrently
+        - If connected:
+            - Reset the disconnection flag
+            - Calculate all node values
+            - Log and publish values concurrently
 
-        If the meter is disconnected and hasn't been processed since disconnection:
-            - Runs one calculation pass to set the calculated nodes to None values
-            - Sets disconnected flag to avoid repeated unnecessary processing
+        - If disconnected:
+            - On the first cycle after disconnection:
+                - Perform a calculation pass to propagate None values
+                - Log the resulting values
+                - Set a flag to avoid redundant recalculations
+            - On subsequent cycles:
+                - Skip calculation
+                - Continue logging existing values
+
+        Publishing only occurs when the meter is connected.
+        Logging is always performed.
         """
 
         if self.connected:
@@ -161,7 +170,10 @@ class EnergyMeter:
             await asyncio.gather(self.log_nodes(), self.publish_nodes())
         elif not self.disconnected_calculation:
             await self.calculate_nodes()
+            await self.log_nodes()
             self.disconnected_calculation = True
+        else:
+            await self.log_nodes()
 
     async def log_nodes(self) -> None:
         """
