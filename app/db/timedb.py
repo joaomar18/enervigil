@@ -835,7 +835,6 @@ class TimeDBClient:
 
     def get_variable_logs(
         self,
-        device_name: str,
         device_id: int,
         variable: Node,
         time_span: TimeSpanParameters,
@@ -850,7 +849,6 @@ class TimeDBClient:
         buckets with `None` and compute global statistics for numeric variables.
 
         Args:
-            device_name (str): Name of the device containing the variable.
             device_id (int): Unique identifier for the device.
             variable (Node): Node instance describing the variable's configuration and processing rules.
             time_span (TimeSpanParameters): Defines the time window and query options, including:
@@ -879,7 +877,7 @@ class TimeDBClient:
 
         client = self.__get_new_client()
         try:
-            db_name = f"{device_name}_{device_id}"
+            db_name = f"device_{device_id}"
 
             if (time_span.start_time and not time_span.end_time) or (time_span.end_time and not time_span.start_time):
                 raise ValueError("Both 'start_time' and 'end_time' must be provided together.")
@@ -928,16 +926,15 @@ class TimeDBClient:
         finally:
             client.close()
 
-    def create_db(self, device_name: str, device_id: int) -> bool:
+    def create_db(self, device_id: int) -> bool:
         """
         Creates an InfluxDB database for a specific device.
 
-        The database name is constructed as "<device_name>_<device_id>" and is intended
+        The database name is constructed as "device_<device_id>" and is intended
         to store time-series measurements for the device. Database creation is a
         non-transactional operation and cannot be rolled back.
 
         Args:
-            device_name (str): The device name.
             device_id (int): The device ID.
 
         Returns:
@@ -948,11 +945,11 @@ class TimeDBClient:
         logger = LoggerManager.get_logger(__name__)
         client = self.__get_new_client()
 
-        db_name = f"{device_name}_{device_id}"
+        db_name = f"device_{device_id}"
 
         try:
             if self.check_db_exists(client, db_name):
-                logger.warning(f"Database for device with name {device_name} and id {device_id} already exists.")
+                logger.warning(f"Database for device with id {device_id} already exists.")
                 return False
 
             client.create_database(db_name)
@@ -962,12 +959,11 @@ class TimeDBClient:
         finally:
             client.close()
 
-    def delete_variable_data(self, device_name: str, device_id: int, variable: Node) -> bool:
+    def delete_variable_data(self, device_id: int, variable: Node) -> bool:
         """
         Delete all measurement data for a specific variable.
 
         Args:
-            device_name: Name of the device containing the variable.
             device_id: Unique ID of the device.
             variable: Node configuration defining the variable to delete.
 
@@ -978,7 +974,7 @@ class TimeDBClient:
         logger = LoggerManager.get_logger(__name__)
         client = self.__get_new_client()
 
-        db_name = f"{device_name}_{device_id}"
+        db_name = f"device_{device_id}"
 
         try:
             if not self.check_db_exists(client, db_name):
@@ -994,7 +990,7 @@ class TimeDBClient:
         finally:
             client.close()
 
-    def delete_all_data(self, device_name: str, device_id: int) -> bool:
+    def delete_all_data(self, device_id: int) -> bool:
         """
         Deletes all time-series data for a device without dropping the database.
 
@@ -1002,7 +998,6 @@ class TimeDBClient:
         preserving measurement metadata.
 
         Args:
-            device_name: Name of the device.
             device_id: Unique device identifier.
 
         Returns:
@@ -1012,7 +1007,7 @@ class TimeDBClient:
         logger = LoggerManager.get_logger(__name__)
         client = self.__get_new_client()
 
-        db_name = f"{device_name}_{device_id}"
+        db_name = f"device_{device_id}"
 
         try:
             if not self.check_db_exists(client, db_name):
@@ -1028,15 +1023,14 @@ class TimeDBClient:
         finally:
             client.close()
 
-    def delete_db(self, device_name: str, device_id: int) -> bool:
+    def delete_db(self, device_id: int) -> bool:
         """
         Deletes the entire InfluxDB database associated with a specific device.
 
-        The database name is constructed as "<device_name>_<device_id>". This operation will
+        The database name is constructed as "device_<device_id>". This operation will
         permanently remove all measurements and data associated with the device.
 
         Args:
-            device_name (str): The name of the device.
             device_id (int): The unique ID of the device.
 
         Returns:
@@ -1046,7 +1040,7 @@ class TimeDBClient:
         logger = LoggerManager.get_logger(__name__)
         client = self.__get_new_client()
 
-        db_name = f"{device_name}_{device_id}"
+        db_name = f"device_{device_id}"
 
         try:
             if not self.check_db_exists(client, db_name):
@@ -1074,12 +1068,11 @@ class TimeDBClient:
 
         return {"name": db} in client.get_list_database()
 
-    def check_variable_has_logs(self, device_name: str, device_id: int, variable: Node) -> bool:
+    def check_variable_has_logs(self, device_id: int, variable: Node) -> bool:
         """
         Checks if there are logs available for the specified variable.
 
         Args:
-            device_name (str): Name of the device.
             device_id (int): ID of the device.
             variable (Node): The variable (node) for which to check logs.
 
@@ -1087,5 +1080,5 @@ class TimeDBClient:
             bool: True if logs exist for the variable, False otherwise.
         """
 
-        logs = self.get_variable_logs(device_name, device_id, variable, TimeSpanParameters())
+        logs = self.get_variable_logs(device_id, variable, TimeSpanParameters())
         return len(logs.points) > 0

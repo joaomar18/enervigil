@@ -60,7 +60,7 @@ def get_meter_energy_consumption(
     pf_node = next((n for n in device.meter_nodes.nodes.values() if n.config.name == pf_node_name), None)
 
     if active_energy_node:
-        active_energy_logs = timedb.get_variable_logs(device.name, device.id, active_energy_node, time_span)
+        active_energy_logs = timedb.get_variable_logs(device.id, active_energy_node, time_span)
     else:
 
         active_energy_logs = NodeLogs(
@@ -74,7 +74,7 @@ def get_meter_energy_consumption(
         )
 
     if reactive_energy_node:
-        reactive_energy_logs = timedb.get_variable_logs(device.name, device.id, reactive_energy_node, time_span)
+        reactive_energy_logs = timedb.get_variable_logs(device.id, reactive_energy_node, time_span)
     else:
         reactive_energy_logs = NodeLogs(
             unit=None,
@@ -186,7 +186,7 @@ def get_meter_peak_power(device: EnergyMeter, phase: NodePhase, timedb: TimeDBCl
     apparent_power_node = next((n for n in device.meter_nodes.nodes.values() if n.config.name == apparent_power_node_name), None)
 
     if active_power_node:
-        active_power_logs = timedb.get_variable_logs(device.name, device.id, active_power_node, time_span, True)
+        active_power_logs = timedb.get_variable_logs(device.id, active_power_node, time_span, True)
     else:
         active_power_logs = NodeLogs(
             unit=None,
@@ -199,7 +199,7 @@ def get_meter_peak_power(device: EnergyMeter, phase: NodePhase, timedb: TimeDBCl
         )
 
     if reactive_power_node:
-        reactive_power_logs = timedb.get_variable_logs(device.name, device.id, reactive_power_node, time_span, True)
+        reactive_power_logs = timedb.get_variable_logs(device.id, reactive_power_node, time_span, True)
     else:
         reactive_power_logs = NodeLogs(
             unit=None,
@@ -212,7 +212,7 @@ def get_meter_peak_power(device: EnergyMeter, phase: NodePhase, timedb: TimeDBCl
         )
 
     if apparent_power_node:
-        apparent_power_logs = timedb.get_variable_logs(device.name, device.id, apparent_power_node, time_span, True)
+        apparent_power_logs = timedb.get_variable_logs(device.id, apparent_power_node, time_span, True)
     else:
         apparent_power_logs = NodeLogs(
             unit=None,

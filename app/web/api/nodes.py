@@ -137,7 +137,7 @@ async def get_logs_from_node(
         raise api_exception.NodeNotFound(api_exception.Errors.NODES.NOT_FOUND)
 
     date.process_time_span(time_span)
-    response = await asyncio.get_running_loop().run_in_executor(timedb.api_executor, timedb.get_variable_logs, device.name, device_id, node, time_span)
+    response = await asyncio.get_running_loop().run_in_executor(timedb.api_executor, timedb.get_variable_logs, device_id, node, time_span)
     return JSONResponse(content=response.get_logs())
 
 
@@ -244,10 +244,10 @@ async def delete_logs_from_node(
     if not node:
         raise api_exception.NodeNotFound(api_exception.Errors.NODES.NOT_FOUND)
 
-    has_logs = await asyncio.get_running_loop().run_in_executor(timedb.api_executor, timedb.check_variable_has_logs, device.name, device_id, node)
+    has_logs = await asyncio.get_running_loop().run_in_executor(timedb.api_executor, timedb.check_variable_has_logs, device_id, node)
 
     if has_logs:
-        result = await asyncio.get_running_loop().run_in_executor(timedb.api_executor, timedb.delete_variable_data, device.name, device_id, node)
+        result = await asyncio.get_running_loop().run_in_executor(timedb.api_executor, timedb.delete_variable_data, device_id, node)
         if not result:
             raise api_exception.DeviceDeleteError(api_exception.Errors.NODES.DELETE_LOGS_FAILED)
 
@@ -274,7 +274,7 @@ async def delete_all_logs(
     if not device:
         raise api_exception.DeviceNotFound(api_exception.Errors.DEVICE.NOT_FOUND, f"Device with id {device_id} not found.")
 
-    result = await asyncio.get_running_loop().run_in_executor(timedb.api_executor, timedb.delete_all_data, device.name, device_id)
+    result = await asyncio.get_running_loop().run_in_executor(timedb.api_executor, timedb.delete_all_data, device_id)
     if not result:
         raise api_exception.DeviceDeleteError(api_exception.Errors.NODES.DELETE_ALL_LOGS_FAILED)
 

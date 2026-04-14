@@ -197,7 +197,7 @@ class EnergyMeter:
                 == 0
             ):
                 log_data = [node.processor.submit_log(current_time)]
-                log_db = f"{self.name}_{self.id}"
+                log_db = f"device_{self.id}"
                 await self.measurements_queue.put(Measurement(db=log_db, data=log_data))
                 self.reset_directional_energy(node)
 

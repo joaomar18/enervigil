@@ -69,7 +69,7 @@ async def add_device(
                 raise api_exception.DeviceCreationError(api_exception.Errors.DEVICE.SAVE_IMAGE_FAILED)
 
         timedb_result = await asyncio.get_running_loop().run_in_executor(
-            timedb.api_executor, timedb.create_db, device_name, device_id
+            timedb.api_executor, timedb.create_db, device_id
         )
         if not timedb_result:
             raise api_exception.DeviceCreationError(api_exception.Errors.DEVICE.DEVICE_STORAGE_FAILED)
@@ -180,7 +180,7 @@ async def delete_device(
         raise
 
     await asyncio.get_running_loop().run_in_executor(device_img.thread_executor, DeviceImageStorage.delete_image, device_id)
-    await asyncio.get_running_loop().run_in_executor(timedb.api_executor, timedb.delete_db, device.name, device_id)
+    await asyncio.get_running_loop().run_in_executor(timedb.api_executor, timedb.delete_db, device_id)
     await device_manager.delete_device(device)
     logger.info(f"Deleted device '{device.name}' with ID {device.id}.")
     return JSONResponse(content={"message": "Device deleted sucessfully."})
