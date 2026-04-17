@@ -44,6 +44,10 @@ if ! ask_keep "Keep InfluxDB measurements (data/influxdb)?"; then
   TO_DELETE+=("data/influxdb")
 fi
 
+if ! ask_keep "Keep MQTT persistence data (data/mosquitto)?"; then
+  TO_DELETE+=("data/mosquitto")
+fi
+
 if ! ask_keep "Keep logs (logs)?"; then
   TO_DELETE+=("logs")
 fi

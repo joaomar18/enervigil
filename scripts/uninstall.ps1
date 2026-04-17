@@ -39,6 +39,10 @@ if (-not (Ask-Keep "Keep InfluxDB measurements (data/influxdb)?")) {
     $toDelete += "data/influxdb"
 }
 
+if (-not (Ask-Keep "Keep MQTT persistence data (data/mosquitto)?")) {
+    $toDelete += "data/mosquitto"
+}
+
 if (-not (Ask-Keep "Keep logs (logs)?")) {
     $toDelete += "logs"
 }

@@ -1,10 +1,12 @@
 ##########     Deployment     ##########
 .env*
+passwordfile*
 !.env.example
 /cert/
 /data/
 /logs/
 /build/
+conf/mosquitto/conf.d
 docker-compose.hardware.yml
 ##########     Backend     ##########
 .venv/

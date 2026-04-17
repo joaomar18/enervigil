@@ -4,3 +4,15 @@ services:
     container_name: enervigil-timedb-dev
     ports:
       - "127.0.0.1:8086:8086"
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: enervigil-mosquitto-dev
+    ports:
+      - "127.0.0.1:1883:1883"
+    environment:
+      - MQTT_ALLOW_ANONYMOUS=true
+      - MQTT_ENABLE_PLAIN=true
+      - MQTT_ENABLE_TLS=false
+    entrypoint: [ "/mosquitto/config/entrypoint.sh" ]
+    volumes:
+      - ./conf/mosquitto:/mosquitto/config

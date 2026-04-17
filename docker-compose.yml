@@ -59,3 +59,23 @@ services:
     depends_on:
       - influxdb
     restart: unless-stopped
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: enervigil-mosquitto
+    ports:
+      - "${MQTT_PORT:-1883}:1883"
+      - "${MQTTS_PORT:-8883}:8883"
+    environment:
+      - MQTT_USERNAME=${MQTT_USERNAME}
+      - MQTT_PASSWORD=${MQTT_PASSWORD}
+      - MQTT_ALLOW_ANONYMOUS=${MQTT_ALLOW_ANONYMOUS:-false}
+      - MQTT_ENABLE_PLAIN=${MQTT_ENABLE_PLAIN:-false}
+      - MQTT_ENABLE_TLS=${MQTT_ENABLE_TLS:-true}
+    entrypoint: [ "/mosquitto/config/entrypoint.sh" ]
+    volumes:
+      - ./conf/mosquitto:/mosquitto/config
+      - ./data/mosquitto:/mosquitto/data
+      - ./logs/mosquitto:/mosquitto/log
+      - ./cert:/cert:ro
+    restart: unless-stopped
