@@ -2,8 +2,6 @@ services:
   scripts:
     build: ./scripts
     container_name: enervigil-init-scripts
-    env_file:
-      - .env
     environment:
       - APP_DATA_PATH=/var/lib/enervigil-backend
       - HOSTNAME=${HOSTNAME:-}

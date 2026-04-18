@@ -156,7 +156,15 @@ class DeviceManager:
             return
 
         topic = "devices"
-        payload: Dict[int, Dict[str, Any]] = {device.id: device.get_device() for device in self.devices}
+        payload: Dict[int, Dict[str, Any]] = {}
+        for device in self.devices:
+            payload[device.id] = {
+                "name": device.name,
+                "protocol": device.protocol,
+                "type": device.meter_type,
+                "connected": device.connected,
+            }
+
         await self.publish_queue.put(MQTTMessage(qos=0, topic=topic, payload=payload))
 
     async def publish_device_data(self, device: EnergyMeter) -> None:
@@ -174,7 +182,7 @@ class DeviceManager:
             name: node for name, node in device.meter_nodes.nodes.items() if node.config.publish
         }
 
-        topic = f"{device.name}_{device.id}_nodes"
+        topic = f"devices/{device.id}/nodes"
         payload: Dict[str, Any] = {}
 
         for node in publish_nodes.values():
