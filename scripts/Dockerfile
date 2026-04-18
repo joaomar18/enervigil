@@ -4,5 +4,5 @@ WORKDIR /app
 
 # Install certificate
 RUN pip install cryptography
-COPY generate_cert.py .
-CMD ["python", "generate_cert.py"]
+COPY generation .
+CMD ["python", "entrypoint.py"]

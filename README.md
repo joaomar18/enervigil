@@ -173,6 +173,62 @@ HOSTNAME=enervigil.local
 - **HTTPS_PORT**: Port for secure HTTPS traffic (recommended: 443). Default: `443`
 - **HOSTNAME**: The domain/hostname used for TLS certificate generation and system access. Examples: `enervigil.local`, `rpi.local`, or `192.168.1.10`
 
+### MQTT Internal Broker Configuration (Mosquitto)
+
+ENERVIGIL includes an internal Mosquitto broker container with configurable plain/TLS listeners and optional authentication.
+
+```env
+# Public MQTT port (plain TCP)
+MQTT_PORT=1883
+
+# Public MQTT over TLS port
+MQTTS_PORT=8883
+
+# Listener toggles
+MQTT_ENABLE_PLAIN=false
+MQTT_ENABLE_TLS=true
+
+# Authentication behavior
+MQTT_ALLOW_ANONYMOUS=false
+
+# Optional one-time credential reset on startup
+# If true and MQTT_USERNAME/MQTT_PASSWORD are provided, password file is recreated.
+# If true and credentials are not provided, password file is removed.
+#MQTT_RESET_PASSWORD=false
+
+# Optional credentials (recommended to set once, then remove from .env)
+#MQTT_USERNAME=user
+#MQTT_PASSWORD=password
+```
+
+**How it works**
+
+- `scripts` service generates MQTT broker/client configuration files from `.env`.
+- `mosquitto` service uses those generated files under `conf/mosquitto/conf.d`.
+- Broker TLS certificates are generated under `cert/` and mounted into containers.
+- Backend MQTT client settings are written to `data/app/mqtt.json`.
+
+**Generated MQTT files**
+
+- Broker listener config: `conf/mosquitto/conf.d/10-listeners.conf`
+- Broker auth config: `conf/mosquitto/conf.d/99-env.conf`
+- Broker password file (if auth enabled): `conf/mosquitto/passwordfile`
+- Backend client config: `data/app/mqtt.json`
+
+**Quick verification**
+
+```bash
+docker compose up -d
+docker compose logs -f scripts
+docker compose logs -f mosquitto
+```
+
+Check generated backend config:
+
+```bash
+cat data/app/mqtt.json
+```
+
 ## 🖥️ Hardware Setup
 
 For deployments with specific hardware requirements (e.g., direct serial port access, network interface binding), use the hardware-specific Docker Compose configuration.
@@ -214,6 +270,8 @@ services:
 - **Frontend (SvelteKit)**: Web UI for configuration and monitoring
 - **InfluxDB**: Time-series database for metrics and measurements
 - **Nginx**: Reverse proxy with TLS termination and CORS handling
+- **Mosquitto**: Internal MQTT broker (plain + TLS listeners)
+- **Scripts Init Service**: Startup generator for TLS certs and MQTT configuration artifacts
 - **SQLite**: Configuration and user data persistence
 
 ### Data Flow
@@ -307,10 +365,11 @@ enervigil/
 │
 ├── conf/                         # Configuration files
 │   ├── influxdb/                 # InfluxDB configuration
+│   ├── mosquitto/                # Mosquitto base config + generated snippets
 │   └── nginx/                    # Nginx reverse proxy config
 │
 ├── scripts/                      # Initialization scripts
-│   └── generate_cert.py          # TLS certificate generation
+│   └── generation/               # Startup generators (cert + MQTT config)
 │
 ├── cert/                         # TLS certificates (generated)
 ├── data/                         # Persistent data (volumes)
@@ -411,7 +470,7 @@ Planned enhancements:
 
 - **Protocol Client Pooling**: Decouple protocol clients from devices to allow multiple devices sharing a single port
 - **Advanced Analytics**: Energy trend analysis and predictive modeling
-- **MQTT Support**: Integration with MQTT brokers for distributed architectures
+- **External MQTT Integrations**: Bridge/remote-broker support for distributed architectures
 - **Data Export**: CSV/JSON export functionality
 - **Mobile App**: Native mobile applications for on-the-go monitoring
 - **User Roles**: Enhanced access control with admin/operator/viewer roles
@@ -469,4 +528,4 @@ For questions, discussions, or feature requests:
 
 ---
 
-**Last Updated**: 15 Feb 2026
+**Last Updated**: 18 Apr 2026

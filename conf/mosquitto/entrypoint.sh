@@ -1,135 +1,84 @@
 #!/bin/sh
-set -eu
+set -e
 
-# ==================================================
-# Environment variables (with defaults)
-# ==================================================
+PASSWORD_FILE="/mosquitto/config/passwordfile"
 
-# Allow anonymous MQTT clients (true/false)
-MQTT_ALLOW_ANONYMOUS="${MQTT_ALLOW_ANONYMOUS:-false}"
+MQTT_ALLOW_ANONYMOUS="${MQTT_ALLOW_ANONYMOUS:-true}"
+MQTT_RESET_PASSWORD="${MQTT_RESET_PASSWORD:-false}"
+MQTT_USERNAME="${MQTT_USERNAME:-}"
+MQTT_PASSWORD="${MQTT_PASSWORD:-}"
 
-# Enable listeners
-MQTT_ENABLE_TLS="${MQTT_ENABLE_TLS:-true}"
-MQTT_ENABLE_PLAIN="${MQTT_ENABLE_PLAIN:-false}"
-
-# ==================================================
-# Paths and configuration files
-# ==================================================
-
-CONFIG_DIR="/mosquitto/config"
-CONF_D_DIR="$CONFIG_DIR/conf.d"
-
-ENV_CONFIG_FILE="$CONF_D_DIR/99-env.conf"
-LISTENER_CONFIG_FILE="$CONF_D_DIR/10-listeners.conf"
-
-PASSWORD_FILE="$CONFIG_DIR/passwordfile"
-
-mkdir -p "$CONF_D_DIR"
-
-# ==================================================
-# Generate listeners configuration
-# ==================================================
-
-echo "# Auto-generated listeners configuration" > "$LISTENER_CONFIG_FILE"
-
-# --- TLS listener ---
-if [ "$MQTT_ENABLE_TLS" = "true" ]; then
-  cat >> "$LISTENER_CONFIG_FILE" <<EOF
-# Secure MQTT (TLS)
-listener 8883 0.0.0.0
-protocol mqtt
-
-cafile /cert/ca/enervigil-ca.crt
-certfile /cert/enervigil.crt
-keyfile /cert/enervigil.key
-EOF
+has_env_credentials=false
+if [ -n "$MQTT_USERNAME" ] && [ -n "$MQTT_PASSWORD" ]; then
+  has_env_credentials=true
 fi
 
-# --- Plain listener ---
-if [ "$MQTT_ENABLE_PLAIN" = "true" ]; then
-  cat >> "$LISTENER_CONFIG_FILE" <<EOF
-
-# Insecure MQTT (non-TLS)
-listener 1883 0.0.0.0
-protocol mqtt
-EOF
+has_password_file=false
+if [ -f "$PASSWORD_FILE" ] && [ -s "$PASSWORD_FILE" ]; then
+  has_password_file=true
 fi
 
-# ==================================================
-# Generate authentication / security configuration
-# ==================================================
+echo "[mosquitto] Startup configuration:"
+echo "  - Anonymous allowed: $MQTT_ALLOW_ANONYMOUS"
+echo "  - Env credentials:   $has_env_credentials"
+echo "  - Password file:     $has_password_file"
+echo "  - Reset requested:   $MQTT_RESET_PASSWORD"
 
-echo "# Auto-generated authentication configuration" > "$ENV_CONFIG_FILE"
+# --------------------------------------------------
+# HANDLE RESET (explicit state change)
+# --------------------------------------------------
 
-# --- Anonymous access ---
-if [ "$MQTT_ALLOW_ANONYMOUS" = "true" ]; then
-  echo "allow_anonymous true" >> "$ENV_CONFIG_FILE"
-else
-  echo "allow_anonymous false" >> "$ENV_CONFIG_FILE"
-fi
+if [ "$MQTT_RESET_PASSWORD" = "true" ]; then
+  echo "[mosquitto] Reset requested..."
 
-# --- Username/password authentication (optional) ---
-if [ -n "${MQTT_USERNAME:-}" ] && [ -n "${MQTT_PASSWORD:-}" ]; then
-
-  if [ ! -f "$PASSWORD_FILE" ] || [ ! -s "$PASSWORD_FILE" ]; then
+  if [ "$has_env_credentials" = "true" ]; then
+    echo "[mosquitto] Resetting with new credentials..."
     mosquitto_passwd -b -c "$PASSWORD_FILE" "$MQTT_USERNAME" "$MQTT_PASSWORD"
+    has_password_file=true
   else
-    mosquitto_passwd -b "$PASSWORD_FILE" "$MQTT_USERNAME" "$MQTT_PASSWORD"
+    echo "[mosquitto] Removing password file (disabling authentication)..."
+    rm -f "$PASSWORD_FILE"
+    has_password_file=false
   fi
+fi
 
-  chown 1883:1883 "$PASSWORD_FILE" || true
+# --------------------------------------------------
+# HANDLE PASSWORD FILE CREATION (first run)
+# --------------------------------------------------
+
+if [ "$MQTT_RESET_PASSWORD" != "true" ]; then
+  if [ "$has_env_credentials" = "true" ] && [ "$has_password_file" = "false" ]; then
+    echo "[mosquitto] Creating password file from env..."
+    mosquitto_passwd -b -c "$PASSWORD_FILE" "$MQTT_USERNAME" "$MQTT_PASSWORD"
+    has_password_file=true
+  else
+    echo "[mosquitto] Keeping existing password file."
+  fi
+fi
+
+# --------------------------------------------------
+# VALIDATION (prevent locked broker)
+# --------------------------------------------------
+
+if [ "$MQTT_ALLOW_ANONYMOUS" = "false" ]; then
+  if [ "$has_password_file" = "false" ]; then
+    echo "[mosquitto] ERROR: Anonymous disabled and no valid credentials available."
+    exit 1
+  fi
+fi
+
+# --------------------------------------------------
+# PERMISSIONS
+# --------------------------------------------------
+
+if [ -f "$PASSWORD_FILE" ]; then
+  chown 1883:1883 "$PASSWORD_FILE" 2>/dev/null || true
   chmod 600 "$PASSWORD_FILE"
-
-  echo "password_file $PASSWORD_FILE" >> "$ENV_CONFIG_FILE"
 fi
 
-# ==================================================
-# Safety validation
-# ==================================================
+# --------------------------------------------------
+# START MOSQUITTO
+# --------------------------------------------------
 
-# At least one listener must be enabled
-if [ "$MQTT_ENABLE_TLS" != "true" ] && [ "$MQTT_ENABLE_PLAIN" != "true" ]; then
-  echo "ERROR: No MQTT listeners enabled (TLS or plain)." >&2
-  exit 1
-fi
-
-# Prevent locked broker (no auth + no anonymous)
-if [ "$MQTT_ALLOW_ANONYMOUS" = "false" ] && [ ! -s "$PASSWORD_FILE" ]; then
-  echo "ERROR: Anonymous disabled but no valid credentials provided." >&2
-  exit 1
-fi
-
-# ==================================================
-# Warnings (important for open-source UX)
-# ==================================================
-
-if [ "$MQTT_ENABLE_PLAIN" = "true" ] && [ "$MQTT_ALLOW_ANONYMOUS" = "true" ]; then
-  echo "WARNING: Plain MQTT (1883) with anonymous access is enabled (INSECURE)." >&2
-fi
-
-if [ "$MQTT_ENABLE_TLS" = "true" ] && [ "$MQTT_ALLOW_ANONYMOUS" = "true" ]; then
-  echo "WARNING: TLS enabled but anonymous access is allowed." >&2
-fi
-
-if [ "$MQTT_ENABLE_TLS" != "true" ]; then
-  echo "INFO: TLS listener disabled (port 8883 will refuse connections)." >&2
-fi
-
-if [ "$MQTT_ENABLE_PLAIN" != "true" ]; then
-  echo "INFO: Plain MQTT listener disabled (port 1883 will refuse connections)." >&2
-fi
-
-# ==================================================
-# Startup info
-# ==================================================
-
-echo "Starting Mosquitto with configuration:"
-echo "  - TLS Enabled:        $MQTT_ENABLE_TLS"
-echo "  - Plain Enabled:      $MQTT_ENABLE_PLAIN"
-echo "  - Anonymous Access:   $MQTT_ALLOW_ANONYMOUS"
-
-# ==================================================
-# Start Mosquitto
-# ==================================================
-
-exec /usr/sbin/mosquitto -c /mosquitto/config/mosquitto.conf
+echo "[mosquitto] Starting broker..."
+exec mosquitto -c /mosquitto/config/mosquitto.conf

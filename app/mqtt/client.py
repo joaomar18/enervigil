@@ -1,6 +1,7 @@
 ###########EXTERNAL IMPORTS############
 
 import asyncio
+import ssl
 from dataclasses import dataclass
 from typing import Optional, Dict, Any
 import os
@@ -42,6 +43,8 @@ class MQTTClientConfig:
 
     Attributes:
         enabled (bool): Whether the MQTT client is enabled.
+        cert_path (str | None): Path of the certificate to use for TLS.
+        hostname (str | None): Hostname of the MQTT Broker.
         port (int | None): Port to use for the MQTT client.
         id (str | None): Client ID to use for the MQTT client.
         authentication (bool): Whether the MQTT client requires authentication.
@@ -51,6 +54,8 @@ class MQTTClientConfig:
     """
 
     enabled: bool
+    cert_path: Optional[str] = None
+    hostname: Optional[str] = None
     port: Optional[int] = None
     id: Optional[str] = None
     authentication: bool = False
@@ -87,6 +92,8 @@ class MQTTClient:
             config: Dict[str, Any] = json.load(file)
             return MQTTClientConfig(
                 enabled=config.get("enabled", False),
+                cert_path=config.get("cert_path", None),
+                hostname=config.get("hostname", None),
                 port=config.get("port", None),
                 id=config.get("id", None),
                 authentication=config.get("authentication", False),
@@ -147,16 +154,27 @@ class MQTTClient:
 
         loop = asyncio.get_event_loop()
 
+        tls_context = None
+        if self.config.cert_path is not None:
+            tls_context = ssl.create_default_context()
+            tls_context.load_verify_locations(self.config.cert_path)
+
         if self.config.authentication and self.config.username and self.config.password and self.config.pass_key:
             self.client = mqtt.Client(
-                hostname="127.0.0.1",
+                hostname=self.config.hostname or "127.0.0.1",
                 port=self.config.port or 1883,
                 identifier=self.config.id,
                 username=self.config.username,
                 password=auth_util.decrypt_password(self.config.password, self.config.pass_key),
+                tls_context=tls_context,
             )
         else:
-            self.client = mqtt.Client(hostname="127.0.0.1", port=self.config.port or 1883, identifier=self.config.id)
+            self.client = mqtt.Client(
+                hostname=self.config.hostname or "127.0.0.1",
+                port=self.config.port or 1883,
+                identifier=self.config.id,
+                tls_context=tls_context,
+            )
         self.publish_task = loop.create_task(self.publisher())
         self.enable_publish.set()
 

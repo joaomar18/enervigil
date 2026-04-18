@@ -16,7 +16,7 @@ CA_KEY = CA_DIR / "enervigil-ca.key"
 CA_CERT = CA_DIR / "enervigil-ca.crt"
 
 VALIDITY_DAYS = 7300  # 20 years
-HOSTNAME = os.getenv("DEVICE_HOSTNAME")
+HOSTNAME = os.getenv("HOSTNAME")
 
 
 def write_key(path, key):
