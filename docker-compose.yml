@@ -6,6 +6,13 @@ services:
       - .env
     environment:
       - APP_DATA_PATH=/var/lib/enervigil-backend
+      - HOSTNAME=${HOSTNAME:-}
+      - MQTT_ENABLE_PLAIN=${MQTT_ENABLE_PLAIN:-false}
+      - MQTT_ENABLE_TLS=${MQTT_ENABLE_TLS:-true}
+      - MQTT_ALLOW_ANONYMOUS=${MQTT_ALLOW_ANONYMOUS:-true}
+      - MQTT_RESET_PASSWORD=${MQTT_RESET_PASSWORD:-false}
+      - MQTT_USERNAME=${MQTT_USERNAME:-}
+      - MQTT_PASSWORD=${MQTT_PASSWORD:-}
     volumes:
       - ./cert:/cert
       - ./conf:/conf
@@ -77,8 +84,8 @@ services:
     environment:
       - MQTT_ALLOW_ANONYMOUS=${MQTT_ALLOW_ANONYMOUS:-true}
       - MQTT_RESET_PASSWORD=${MQTT_RESET_PASSWORD:-false}
-      - MQTT_USERNAME=${MQTT_USERNAME}
-      - MQTT_PASSWORD=${MQTT_PASSWORD}
+      - MQTT_USERNAME=${MQTT_USERNAME:-}
+      - MQTT_PASSWORD=${MQTT_PASSWORD:-}
     ports:
       - "${MQTT_PORT:-1883}:1883"
       - "${MQTTS_PORT:-8883}:8883"

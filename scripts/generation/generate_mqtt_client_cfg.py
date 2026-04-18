@@ -10,8 +10,8 @@ from cryptography.fernet import Fernet
 
 APP_DATA_PATH = os.getenv("APP_DATA_PATH", None)
 HOSTNAME = os.getenv("HOSTNAME", "127.0.0.1")
-MQTT_PORT = int(os.getenv("MQTT_PORT", 1883))
-MQTTS_PORT = int(os.getenv("MQTTS_PORT", 8883))
+MQTT_PORT = 1883 # Internal Plain MQTT port used by the mosquitto service
+MQTTS_PORT = 8883 # Internal Plain MQTTS port used by the mosquitto service
 MQTT_ALLOW_ANONYMOUS = os.getenv("MQTT_ALLOW_ANONYMOUS", "false").lower() == "true"
 MQTT_ENABLE_TLS = os.getenv("MQTT_ENABLE_TLS", "true").lower() == "true"
 MQTT_ENABLE_PLAIN = os.getenv("MQTT_ENABLE_PLAIN", "false").lower() == "true"

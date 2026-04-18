@@ -13,7 +13,6 @@ MQTT_RESET_PASSWORD = os.getenv("MQTT_RESET_PASSWORD", "false").lower() == "true
 MQTT_USERNAME = os.getenv("MQTT_USERNAME")
 MQTT_PASSWORD = os.getenv("MQTT_PASSWORD")
 
-
 # ==================================================
 # Paths
 # ==================================================
@@ -62,7 +61,11 @@ def generate():
             )
 
     # Authentication
-    old_authentication = PASSWORD_FILE.exists() and PASSWORD_FILE.stat().st_size > 0 and not MQTT_RESET_PASSWORD
+    old_authentication = (
+        PASSWORD_FILE.exists()
+        and PASSWORD_FILE.stat().st_size > 0
+        and not MQTT_RESET_PASSWORD
+    )
     new_authentication = bool(MQTT_USERNAME) and bool(MQTT_PASSWORD)
     authentication = old_authentication or new_authentication
 
@@ -78,13 +81,13 @@ def generate():
             f.write(f"password_file /mosquitto/config/passwordfile\n")
 
     # Safety checks
-    if not MQTT_ENABLE_TLS and not MQTT_ENABLE_PLAIN:
-        raise RuntimeError("No MQTT listeners enabled (TLS or plain).")
-
     if not MQTT_ALLOW_ANONYMOUS and not authentication:
         raise RuntimeError("Anonymous disabled but no valid credentials provided.")
 
     # Warnings
+    if not MQTT_ENABLE_PLAIN and not MQTT_ENABLE_TLS:
+        print("WARNING: MQTT is disabled on both plain and tls interface")
+
     if MQTT_ENABLE_PLAIN and MQTT_ALLOW_ANONYMOUS:
         print("WARNING: Plain MQTT (1883) with anonymous access is enabled (INSECURE)")
 
