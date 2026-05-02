@@ -1,4 +1,20 @@
 services:
+  scripts:
+    build: ./scripts
+    container_name: enervigil-init-scripts-dev
+    environment:
+      - APP_DATA_PATH=/var/lib/enervigil-backend
+      - HOSTNAME=
+      - MQTT_ENABLE_PLAIN=true
+      - MQTT_ENABLE_TLS=false
+      - MQTT_ALLOW_ANONYMOUS=true
+      - MQTT_RESET_PASSWORD=false
+      - MQTT_USERNAME=
+      - MQTT_PASSWORD=
+    volumes:
+      - ./cert:/cert
+      - ./conf:/conf
+      - ./data/app:/var/lib/enervigil-backend
   influxdb:
     image: influxdb:1.8
     container_name: enervigil-timedb-dev
@@ -16,3 +32,4 @@ services:
     entrypoint: [ "sh", "/mosquitto/config/entrypoint.sh" ]
     volumes:
       - ./conf/mosquitto:/mosquitto/config
+      - ./cert:/cert:ro

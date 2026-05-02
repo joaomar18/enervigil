@@ -383,17 +383,23 @@ class SystemMonitor:
             Returns NaN if the temperature cannot be determined.
         """
 
-        # Standard psutil method
-        temps = psutil.sensors_temperatures()
-        if temps:
-            for key in ("coretemp", "cpu_thermal", "soc_thermal"):
-                entries = temps.get(key)
-                if entries:
-                    values = [t.current for t in entries if t.current is not None]
-                    if values:
-                        return max(values)
+        # psutil temperature sensors are not available on all platforms
+        sensors_temperatures = getattr(psutil, "sensors_temperatures", None)
 
-        # Raspberry Pi specific method
+        if sensors_temperatures is not None:
+            try:
+                temps = sensors_temperatures()
+                if temps:
+                    for key in ("coretemp", "cpu_thermal", "soc_thermal"):
+                        entries = temps.get(key)
+                        if entries:
+                            values = [t.current for t in entries if t.current is not None]
+                            if values:
+                                return max(values)
+            except Exception:
+                pass
+
+        # Raspberry Pi / Linux fallback
         try:
             with open("/sys/class/thermal/thermal_zone0/temp") as f:
                 return int(f.read().strip()) / 1000.0
