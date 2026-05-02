@@ -92,7 +92,7 @@ services:
       - ./data/mosquitto:/mosquitto/data
       - ./logs/mosquitto:/mosquitto/log
       - ./cert:/cert:ro
-    entrypoint: [ "/mosquitto/config/entrypoint.sh" ]
+    entrypoint: [ "sh", "/mosquitto/config/entrypoint.sh" ]
     depends_on:
       - scripts
     restart: unless-stopped

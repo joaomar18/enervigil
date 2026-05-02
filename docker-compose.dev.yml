@@ -13,6 +13,6 @@ services:
       - MQTT_ALLOW_ANONYMOUS=true
       - MQTT_ENABLE_PLAIN=true
       - MQTT_ENABLE_TLS=false
-    entrypoint: [ "/mosquitto/config/entrypoint.sh" ]
+    entrypoint: [ "sh", "/mosquitto/config/entrypoint.sh" ]
     volumes:
       - ./conf/mosquitto:/mosquitto/config
