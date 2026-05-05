@@ -218,7 +218,7 @@ class OPCUAEnergyMeter(EnergyMeter):
                         await self.process_batch_read(self.client, batch_read_nodes, single_read_nodes)
                         await self.process_single_reads(self.client, single_read_nodes)
                         end_time = time.perf_counter()
-                        elapsed_time = end_time-start_time
+                        elapsed_time = (end_time-start_time) * 1000
                         validation_metrics.devices_comm[self.id].comm_metrics.update_metrics(elapsed_time)
 
                         if not enabled_nodes or any(node.connected for node in enabled_nodes):
