@@ -294,7 +294,7 @@ class SystemMonitor:
                 self.ram_usage_perc.add(ram_use_perc)
                 ########## Validation ##########
                 validation_metrics.load.cpu_metrics.update_metrics(cpu_use_perc)
-                validation_metrics.load.ram_metrics.update_metrics(ram_use_perc)
+                validation_metrics.load.ram_metrics.update_metrics(ram_usage)
                 ################################
                 if disk_read is not None and prev_disk_read is not None:
                     disk_read_speed = (disk_read - prev_disk_read) / self.POLLING_INTERVAL_SECONDS
