@@ -18,6 +18,7 @@ import math
 from model.struct.sliding_window import SlidingWindow
 import util.functions.date as date
 from model.analytics.system import RealTimeSystemData, DiskMetrics
+from analytics.validation import validation_metrics
 
 #######################################
 
@@ -291,6 +292,10 @@ class SystemMonitor:
 
                 self.cpu_usage_perc.add(cpu_use_perc)
                 self.ram_usage_perc.add(ram_use_perc)
+                ########## Validation ##########
+                validation_metrics.load.cpu_metrics.update_metrics(cpu_use_perc)
+                validation_metrics.load.ram_metrics.update_metrics(ram_use_perc)
+                ################################
                 if disk_read is not None and prev_disk_read is not None:
                     disk_read_speed = (disk_read - prev_disk_read) / self.POLLING_INTERVAL_SECONDS
                     if disk_read_speed < 0:

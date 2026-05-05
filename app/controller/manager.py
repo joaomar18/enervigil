@@ -13,6 +13,7 @@ from model.controller.device import EnergyMeterRecord
 from controller.registry.protocol import ProtocolRegistry
 from controller.meter.device import EnergyMeter
 from controller.node.node import Node
+from analytics.validation import validation_metrics, DeviceCommunicationValidation, DeviceLoggingValidation
 
 #######################################
 
@@ -94,6 +95,8 @@ class DeviceManager:
         """
 
         for device in self.devices:
+            validation_metrics.devices_comm.pop(device.id, None)
+            validation_metrics.devices_logs.pop(device.id, None)
             await device.stop()
 
     async def add_device(self, device: EnergyMeter):
@@ -111,6 +114,8 @@ class DeviceManager:
         if device.publish_data is None:
             device.publish_data = self.publish_device_data
 
+        validation_metrics.devices_comm[device.id] = DeviceCommunicationValidation(device.name, device.id)
+        validation_metrics.devices_logs[device.id] = DeviceLoggingValidation(device.name, device.id)
         await device.start()
         self.devices.add(device)
 
@@ -122,6 +127,8 @@ class DeviceManager:
             device (Device): The device instance to remove.
         """
 
+        validation_metrics.devices_comm.pop(device.id, None)
+        validation_metrics.devices_logs.pop(device.id, None)
         await device.stop()
         self.devices.discard(device)
 

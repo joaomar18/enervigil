@@ -7,6 +7,7 @@ from pymodbus.client import AsyncModbusSerialClient as ModbusRTUClient
 from pymodbus import ModbusException
 from typing import Optional, Set, Dict, List, Callable, Awaitable, Any
 import logging
+import time
 
 #######################################
 
@@ -26,6 +27,7 @@ from model.controller.protocol.modbus_rtu import (
     MODBUS_RTU_TYPE_TO_SIZE_MAP,
 )
 from controller.meter.device import EnergyMeter
+from analytics.validation import validation_metrics
 
 #######################################
 
@@ -245,19 +247,29 @@ class ModbusRTUEnergyMeter(EnergyMeter):
                         enabled_nodes = [node for node in self.modbus_rtu_nodes if node.config.enabled]
                         batch_read_nodes = [node for node in enabled_nodes if node.enable_batch_read]
                         single_read_nodes = [node for node in enabled_nodes if not node.enable_batch_read]
-
+                        start_time = time.perf_counter()
                         await self.process_batch_read(self.client, batch_read_nodes, single_read_nodes)
                         await self.process_single_reads(self.client, single_read_nodes)
+                        end_time = time.perf_counter()
+                        elapsed_time = end_time-start_time
+                        validation_metrics.devices_comm[self.id].comm_metrics.update_metrics(elapsed_time)
 
                         if not enabled_nodes or any(node.connected for node in enabled_nodes):
                             self.set_connection_state(True)
                             if self.last_seen_update:
                                 await self.last_seen_update(self.id)
+                            
+                            connected_nodes = sum(1 for node in enabled_nodes if node.connected)
+                            has_disconnected_enabled_nodes = connected_nodes != len(enabled_nodes)
+                            validation_metrics.devices_comm[self.id].add_executed_cycle(False, has_disconnected_enabled_nodes)
+
                         else:
                             self.set_connection_state(False)
+                            validation_metrics.devices_comm[self.id].add_executed_cycle(True, False)
                     elif not self.force_nodes_disconnection:
                         self.disconnect_communication_nodes()
                         self.force_nodes_disconnection = True
+                        validation_metrics.devices_comm[self.id].add_executed_cycle(True, False)
 
                 await self.process_nodes()
 
@@ -268,7 +280,7 @@ class ModbusRTUEnergyMeter(EnergyMeter):
             except Exception as e:
                 logger.exception(f"{e}")
                 self.set_connection_state(False)
-
+            validation_metrics.devices_comm[self.id].add_expected_cycle()
             await asyncio.sleep(self.communication_options.read_period)
 
     async def process_batch_read(

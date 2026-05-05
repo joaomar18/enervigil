@@ -25,6 +25,7 @@ from db.timedb import Measurement
 import util.functions.date as date
 import util.functions.meter as meter_util
 from util.debug import LoggerManager
+from analytics.validation import validation_metrics
 
 #######################################
 
@@ -196,7 +197,16 @@ class EnergyMeter:
                 and date.get_timestamp(date.remove_sec_precision(current_time)) % date.min_to_ms(node.config.logging_period)
                 == 0
             ):
+                validation_metrics.devices_logs[self.id].add_expected_log(is_counter=node.config.is_counter)
                 log_data = [node.processor.submit_log(current_time)]
+                for data in log_data:
+                    if "value" in data:
+                        if data.get("value") is not None:
+                            validation_metrics.devices_logs[self.id].add_executed_log(is_counter=node.config.is_counter)
+                    elif "min_value" in data and "max_value" in data:
+                        if data.get("min_value") is not None and data.get("max_value") is not None:
+                            validation_metrics.devices_logs[self.id].add_executed_log(is_counter=node.config.is_counter)
+
                 log_db = f"device_{self.id}"
                 await self.measurements_queue.put(Measurement(db=log_db, data=log_data))
                 self.reset_directional_energy(node)

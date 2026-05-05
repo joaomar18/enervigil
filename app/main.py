@@ -14,6 +14,7 @@ from controller.manager import DeviceManager
 from web.server import HTTPServer
 from util.debug import LoggerManager
 from analytics.system import SystemMonitor
+from analytics.validation import validation_metrics
 
 #######################################
 
@@ -56,6 +57,7 @@ async def async_main() -> None:
         await mqtt_client.start()
         await http_server.start()
         system_monitor.start()
+        await validation_metrics.start()
         # Keep main loop alive to support background tasks
         while True:
             await asyncio.sleep(2)
@@ -72,6 +74,8 @@ async def async_main() -> None:
         await mqtt_client.stop()
         logger.debug("Shutting down Device Manager...")
         await device_manager.stop()
+        logger.debug("Shutting down Validation...")
+        await validation_metrics.stop()
         logger.debug("Shutting down System Monitor...")
         system_monitor.stop()
         logger.debug("Shutting down HTTP server...")
