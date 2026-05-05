@@ -245,7 +245,8 @@ class OPCUAEnergyMeter(EnergyMeter):
             except Exception as e:
                 logger.exception(f"{e}")
                 self.set_connection_state(False)
-            validation_metrics.devices_comm[self.id].add_expected_cycle()
+            if self.first_connection:
+                validation_metrics.devices_comm[self.id].add_expected_cycle()
             await asyncio.sleep(self.communication_options.read_period)
 
     async def process_batch_read(
