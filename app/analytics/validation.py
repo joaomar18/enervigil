@@ -47,9 +47,9 @@ class PerformanceMetrics:
 
     def get_metrics(self) -> Dict[str, Any]:
         return {
-            "minimum": str(f"{round(self.minimum, 3)} %") if self.minimum is not None else None,
-            "average": str(f"{round(self.average, 3)} %") if self.average is not None else None,
-            "maximum": str(f"{round(self.maximum, 3)} %") if self.maximum is not None else None,
+            "minimum": str(f"{round(self.minimum, 3)}") if self.minimum is not None else None,
+            "average": str(f"{round(self.average, 3)}") if self.average is not None else None,
+            "maximum": str(f"{round(self.maximum, 3)}") if self.maximum is not None else None,
         }
 
 
