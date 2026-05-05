@@ -138,6 +138,7 @@ class ModbusRTUEnergyMeter(EnergyMeter):
         }
 
         self.force_nodes_disconnection = False
+        self.first_connection = False #TO REMOVE
 
     async def start(self) -> None:
         """
@@ -243,6 +244,7 @@ class ModbusRTUEnergyMeter(EnergyMeter):
             try:
                 if self.client:
                     if self.network_connected:
+                        self.first_connection = True
                         self.force_nodes_disconnection = False
                         enabled_nodes = [node for node in self.modbus_rtu_nodes if node.config.enabled]
                         batch_read_nodes = [node for node in enabled_nodes if node.enable_batch_read]
@@ -269,7 +271,8 @@ class ModbusRTUEnergyMeter(EnergyMeter):
                     elif not self.force_nodes_disconnection:
                         self.disconnect_communication_nodes()
                         self.force_nodes_disconnection = True
-                        validation_metrics.devices_comm[self.id].add_executed_cycle(True, False)
+                        if self.first_connection:
+                            validation_metrics.devices_comm[self.id].add_executed_cycle(True, False)
 
                 await self.process_nodes()
 
