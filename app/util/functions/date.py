@@ -150,7 +150,8 @@ def to_iso_minutes(date: datetime) -> str:
 
 def subtract_datetime_mins(dt1: datetime, dt2: datetime) -> int:
     """
-    Calculates difference between two datetimes in minutes.
+    Calculates difference between two datetimes in minutes,
+    ignoring seconds and microseconds.
 
     Args:
         dt1: First datetime.
@@ -160,7 +161,9 @@ def subtract_datetime_mins(dt1: datetime, dt2: datetime) -> int:
         int: Difference in minutes.
     """
 
-    difference = int((dt2 - dt1).total_seconds()) // 60
+    dt1_min = dt1.replace(second=0, microsecond=0)
+    dt2_min = dt2.replace(second=0, microsecond=0)
+    difference = int((dt2_min - dt1_min).total_seconds()) // 60
     return difference
 
 
