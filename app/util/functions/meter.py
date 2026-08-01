@@ -133,7 +133,7 @@ def get_node(key: str, dictionary: Dict[str, Node]) -> Node:
     return node
 
 
-def get_numeric_value(node: Node) -> Optional[int | float]:
+def get_numeric_value(node: Optional[Node]) -> Optional[int | float]:
     """
     Retrieve the numeric value of a node if available.
 

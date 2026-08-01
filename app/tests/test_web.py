@@ -72,9 +72,6 @@ class DummySQLiteDB(SQLiteDBClient):
 
 
 class DummyTimeDB(TimeDBClient):
-    def __init__(self):
-        super().__init__(host="127.0.0.1", port=8010)
-
     def get_measurement_data_between(self, *args, **kwargs):
         return []
 
@@ -121,15 +118,6 @@ def test_get_all_devices(monkeypatch, tmp_path):
     safety = HTTPSafety()
     dev = DummyMeter("dev1", set())
     app = create_app(safety, DummyDeviceManager([dev]))
-
-    # Patch image provider used by the endpoint
-    from util.functions import images
-
-    monkeypatch.setattr(
-        images,
-        "get_device_image",
-        lambda device_id, default, directory: {"data": "", "type": "", "filename": ""},
-    )
 
     with TestClient(app) as client:
         # 1) Login
