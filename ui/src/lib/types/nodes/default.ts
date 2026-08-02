@@ -3,6 +3,7 @@ import { Protocol } from "../device/base";
 import type { EditableBaseNodeProtocolOptions, EditableNodeNoProtocolOptions } from "./config";
 import { ModbusRTUFunction, ModbusRTUNodeMode, ModbusRTUNodeType, type EditableModbusRTUNodeOptions } from "./protocol/modbusRtu";
 import { OPCUANodeType, type EditableOPCUANodeOptions } from "./protocol/opcUa";
+import { MQTTNodeMode, MQTTNodeType, type EditableMQTTNodeOptions } from "./protocol/mqtt";
 
 /*****     C O N S T A N T S     *****/
 
@@ -76,4 +77,11 @@ export const defaultFloatNodeProtocolOptions: Record<Protocol, EditableBaseNodeP
         node_id: "",
         type: OPCUANodeType.FLOAT,
     } as EditableOPCUANodeOptions,
+    [Protocol.MQTT]: {
+        topic: "",
+        mode: MQTTNodeMode.RAW,
+        type: MQTTNodeType.FLOAT,
+        json_path: null,
+        qos: "0",
+    } as EditableMQTTNodeOptions,
 };

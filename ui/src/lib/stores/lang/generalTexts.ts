@@ -1053,6 +1053,62 @@ const textsObject: TextsObject = {
             "• BYTE_SWAP — The bytes within each 16-bit word are swapped, while the word order is preserved.\n" +
             "• WORD_BYTE_SWAP — Both the 16-bit word order and the byte order within each word are swapped.",
     },
+    brokerMode: {
+        PT: "Modo do Broker",
+        EN: "Broker Mode",
+    },
+    brokerModeInfo: {
+        PT: "Define se o sistema utiliza o broker MQTT interno ou estabelece ligação a um broker externo.",
+        EN: "Defines whether the system uses the internal MQTT broker or connects to an external broker.",
+    },
+    staleAfter: {
+        PT: "Tempo Limite de Inatividade",
+        EN: "Staleness Timeout",
+    },
+    staleAfterInfo: {
+        PT: "Tempo máximo (em segundos) sem receber mensagens de uma variável antes de a considerar desconectada.",
+        EN: "Maximum time (in seconds) without receiving messages for a variable before it is considered disconnected.",
+    },
+    useTls: {
+        PT: "Utilizar TLS",
+        EN: "Use TLS",
+    },
+    useTlsInfo: {
+        PT: "Ativa a ligação encriptada (TLS) ao broker MQTT externo.",
+        EN: "Enables an encrypted (TLS) connection to the external MQTT broker.",
+    },
+    enableAuthentication: {
+        PT: "Ativar Autenticação",
+        EN: "Enable Authentication",
+    },
+    enableAuthenticationInfo: {
+        PT: "Ativa a autenticação por utilizador e palavra-passe no broker MQTT externo.",
+        EN: "Enables username and password authentication on the external MQTT broker.",
+    },
+    mqttMode: {
+        PT: "Modo da Mensagem",
+        EN: "Message Mode",
+    },
+    mqttModeInfo: {
+        PT: "Define se o valor é lido diretamente do conteúdo da mensagem (RAW) ou extraído de um campo específico de uma mensagem em formato JSON.",
+        EN: "Defines whether the value is read directly from the message payload (RAW) or extracted from a specific field of a JSON-formatted message.",
+    },
+    mqttJsonPath: {
+        PT: "Caminho JSON",
+        EN: "JSON Path",
+    },
+    mqttJsonPathInfo: {
+        PT: 'Caminho, separado por pontos, utilizado para localizar o valor dentro da mensagem JSON (ex: "data.voltage").',
+        EN: 'Dot-separated path used to locate the value within the JSON message (e.g. "data.voltage").',
+    },
+    mqttQos: {
+        PT: "QoS",
+        EN: "QoS",
+    },
+    mqttQosInfo: {
+        PT: "Nível de qualidade de serviço (QoS) utilizado para subscrever o tópico MQTT.",
+        EN: "Quality of Service (QoS) level used to subscribe to the MQTT topic.",
+    },
 };
 
 export const texts = createLangStore(textsObject);

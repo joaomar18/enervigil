@@ -15,6 +15,10 @@ const textsObjectsProtocols: TextsObject = {
         PT: "MODBUS RTU",
         EN: "MODBUS RTU",
     },
+    MQTT: {
+        PT: "MQTT",
+        EN: "MQTT",
+    },
 };
 
 //////////     P H A S E     T E X T S     //////////

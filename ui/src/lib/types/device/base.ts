@@ -13,6 +13,7 @@ export const TIMEOUT_LIM: Record<string, number> = { MIN: 1, MAX: 15 };
 export enum Protocol {
     MODBUS_RTU = "MODBUS_RTU",
     OPC_UA = "OPC_UA",
+    MQTT = "MQTT",
     NONE = "NONE",
 }
 

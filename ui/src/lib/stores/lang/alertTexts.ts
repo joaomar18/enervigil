@@ -32,6 +32,14 @@ const generalAlertTextsObject: TextsObject = {
         PT: "O número de tentativas de reenvio deve estar compreendido entre {minValue} e {maxValue}.",
         EN: "The number of retries must be between {minValue} and {maxValue}.",
     },
+    staleAfterError: {
+        PT: "O tempo limite de inatividade deve estar compreendido entre {minValue} e {maxValue} segundos.",
+        EN: "The staleness timeout must be between {minValue} and {maxValue} seconds.",
+    },
+    portError: {
+        PT: "A porta deve estar compreendida entre {minValue} e {maxValue}.",
+        EN: "The port must be between {minValue} and {maxValue}.",
+    },
     invalidDeviceName: {
         PT: "O nome do dispositivo é inválido.",
         EN: "The device name is invalid.",

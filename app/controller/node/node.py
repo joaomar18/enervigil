@@ -1,6 +1,7 @@
 ###########EXTERNAL IMPORTS############
 
-from typing import Dict, Any
+from typing import Dict, Any, Optional
+from datetime import datetime
 
 #######################################
 
@@ -9,6 +10,7 @@ from typing import Dict, Any
 from model.controller.node import NodeConfig, BaseNodeRecordConfig, NodeRecord, BaseNodeProtocolOptions
 from model.controller.protocol.modbus_rtu import ModbusRTUNodeOptions
 from model.controller.protocol.opc_ua import OPCUANodeOptions
+from model.controller.protocol.mqtt import MQTTNodeOptions
 from controller.registry.node_type import TypeRegistry
 
 #######################################
@@ -205,6 +207,41 @@ class OPCUANode(Node):
 
         self.number_fails = 0
         self.enable_batch_read = True
+
+
+# MQTT Node
+class MQTTNode(Node):
+    """
+    Node implementation for the MQTT protocol.
+
+    Extends the base Node with MQTT-specific communication options, such as
+    the source topic and payload extraction mode. Unlike the polling protocols,
+    connection state is not derived from a read attempt but from how recently
+    a message was last received for this node.
+
+    Args:
+        configuration (NodeConfig): Runtime configuration for the node.
+        protocol_options (MQTTNodeOptions): MQTT-specific options including
+            the topic, payload mode, and expected data type.
+    """
+
+    def __init__(self, configuration: NodeConfig, protocol_options: MQTTNodeOptions):
+        super().__init__(configuration=configuration, protocol_options=protocol_options)
+        self.options = protocol_options
+        self.connected = False
+        self.last_message_time: Optional[datetime] = None
+
+    def set_connection_state(self, state: bool) -> None:
+        """
+        Updates the node's connection state.
+
+        Args:
+            state (bool): True if a fresh, successfully processed message was
+                received for this node; False if it is considered stale or the
+                last message failed to process.
+        """
+
+        self.connected = state
 
 
 #################################################################################

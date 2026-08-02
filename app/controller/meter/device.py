@@ -274,7 +274,7 @@ class EnergyMeter:
             prefix = meter_util.get_node_prefix(node)
 
             for key, (func, kwargs) in self.calculation_methods.items():
-                if key in node.config.name:
+                if node.config.name == f"{prefix}{key.lstrip('_')}":
                     tasks.append(asyncio.to_thread(func, node=node, prefix=prefix, **kwargs))
                     break
 

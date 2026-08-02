@@ -63,6 +63,22 @@ const textsObjectsPlugin: TextsObject = {
         PT: "Tipo da variável para comunicação OPC UA.",
         EN: "Variable type for OPC UA communication.",
     },
+    mqttTopic: {
+        PT: "Tópico",
+        EN: "Topic",
+    },
+    mqttTopicInfo: {
+        PT: "Indique o tópico MQTT utilizado para aceder à variável no dispositivo.",
+        EN: "Specify the MQTT topic used to access the variable on the device.",
+    },
+    mqttType: {
+        PT: "Tipo",
+        EN: "Type",
+    },
+    mqttTypeInfo: {
+        PT: "Tipo da variável para comunicação MQTT.",
+        EN: "Variable type for MQTT communication.",
+    },
 };
 
 const textsObjectsNoProtocolNodeType: TextsObject = {
