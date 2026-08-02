@@ -46,6 +46,7 @@ class NodeProcessor(ABC, Generic[V]):
         self.value: Optional[V] = None
         self.timestamp: Optional[int] = None
         self.elapsed_time: Optional[float] = None
+        self._was_reset: bool = False
 
     @staticmethod
     def is_numeric_processor(processor: "NodeProcessor[Any]") -> TypeGuard["NodeProcessor[int] | NodeProcessor[float]"]:
@@ -108,6 +109,7 @@ class NodeProcessor(ABC, Generic[V]):
 
         if value is None:
             self.value = None
+            self._was_reset = True
             return False
 
         self.update_timestamp()
@@ -116,15 +118,23 @@ class NodeProcessor(ABC, Generic[V]):
     def update_timestamp(self) -> None:
         """
         Updates the processor's timestamp and calculates elapsed time since last update.
+
+        If the value was cleared to None since the previous update (e.g. the node
+        was disconnected), elapsed_time is reset to 0.0 instead of spanning the
+        disconnection gap, so consumers such as DELTA energy integration do not
+        attribute the entire outage duration to the first sample after reconnecting.
+        The last known timestamp itself is left untouched, since it is also used
+        to report when the node was last seen, independently of this behavior.
         """
 
         current_timestamp = date.get_timestamp(date.get_current_utc_datetime())
-        if self.timestamp is None:
+        if self.timestamp is None or self._was_reset:
             self.elapsed_time = 0.0
         else:
             self.elapsed_time = (current_timestamp - self.timestamp) / 1000.0  # converted to seconds
 
         self.timestamp = current_timestamp
+        self._was_reset = False
 
     def reset_alarms(self) -> None:
         """

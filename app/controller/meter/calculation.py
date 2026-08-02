@@ -68,10 +68,21 @@ def calculate_energy(prefix: str, energy_type: str, node: Node, meter_nodes: Dic
         if power_value is None:
             return
 
+        power_timestamp = power_node.processor.timestamp
+
+        # Skip re-integration if this power sample was already accounted for.
+        # calculate_nodes() can run more often than the power node actually
+        # receives new samples (e.g. MQTT, where it is also triggered by other
+        # topics and by a periodic staleness check), so without this guard the
+        # same elapsed_time would be integrated into the total multiple times.
+        if power_timestamp is not None and power_timestamp == node.processor.last_source_timestamp:
+            return
+
         elapsed_hours = power_node.processor.elapsed_time / 3600.0 if power_node.processor.elapsed_time else 0.0
         scaled_power = calculation.get_scaled_value(power_value, power_node.config.unit)
         scaled_value = calculation.apply_output_scaling(scaled_power * elapsed_hours, node.config.unit)
         node.processor.set_value(scaled_value)
+        node.processor.last_source_timestamp = power_timestamp
 
 
 def calculate_power(prefix: str, power_type: str, node: Node, meter_nodes: Dict[str, Node]) -> None:

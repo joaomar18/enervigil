@@ -49,6 +49,11 @@ class NumericNodeProcessor(NodeProcessor[N]):
         self.mean_sum: float = 0.0
         self.mean_count: int = 0
 
+        # Timestamp of the source sample last consumed by a DELTA power-to-energy
+        # integration, used to avoid re-integrating the same sample when the
+        # calculation is triggered more often than the source updates (e.g. MQTT).
+        self.last_source_timestamp: Optional[int] = None
+
     def __init_subclass__(cls, **kw):
         if cls is not NumericNodeProcessor and "ZERO" not in cls.__dict__:
             raise TypeError(f"{cls.__name__} must define property ZERO")
