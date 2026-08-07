@@ -2,7 +2,7 @@
 
 Enervigil is an **open-source**, **actively developing** energy monitoring and management system designed for real-time data acquisition, analysis, and visualization of energy consumption across single-phase and three-phase electrical systems.
 
-> **Note:** This project is in active development. Currently, **only basic functionality** is available. Features are being progressively implemented and refined.
+> **Note:** This project is in active development. The core monitoring and device-management functionality is implemented, while additional features are being progressively added and refined.
 
 ## 🎯 Overview
 
