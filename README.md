@@ -483,8 +483,6 @@ This project is open source. See the LICENSE file for details.
 
 ## 🐛 Known Issues & Limitations
 
-## 🐛 Known Issues & Limitations
-
 ### Current Limitations
 
 1. **Modbus RTU Port Sharing**: Only one device can use a serial port at a time due to device-owned protocol clients. This will be addressed by implementing shared client pools.
