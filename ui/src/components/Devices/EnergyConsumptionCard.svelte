@@ -137,6 +137,8 @@
             return;
         }
         energyConsumptionFetched = false;
+        console.log(selectedElectricalPhase);
+        console.log(selectedEnergyDirection);
         let result = await getEnergyConsumptionAPI(
             deviceId,
             selectedElectricalPhase,
