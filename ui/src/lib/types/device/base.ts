@@ -32,7 +32,7 @@ export enum MeterType {
  * Base interface for protocol-specific communication configuration objects.
  * Extend for each protocol to define its configuration shape.
  */
-export interface BaseCommunicationConfig {}
+export interface BaseCommunicationConfig { }
 
 /**
  * Base interface for editable protocol configuration objects in forms and UI.
@@ -51,7 +51,7 @@ export interface EditableBaseCommunicationConfig {
  *
  * @interface MeterOptions
  */
-export interface MeterOptions {}
+export interface MeterOptions { }
 
 /**
  * Complete device meter configuration interface.
@@ -179,7 +179,8 @@ export interface DeviceValidation {
 
 /**
  * Extended device information for status and health overview.
- * Includes connection state, alarm indicators, device type, and lifecycle timestamps.
+ * Includes connection state, alarm indicators, device type, lifecycle timestamps,
+ * and protocol-specific configuration fields.
  *
  * @interface ExtendedDeviceInfo
  * @property {Protocol} protocol - Communication protocol used by the device
@@ -190,9 +191,11 @@ export interface DeviceValidation {
  * @property {string | null} last_seen - Timestamp of the last disconnection or connection event (ISO string)
  * @property {string | null} created_at - Device creation timestamp (ISO string)
  * @property {string | null} updated_at - Last configuration update timestamp (ISO string)
- * @property {string | null} enabled_nodes - Number of enabled nodes in the device
- * @property {string | null} ok_nodes - Number of healthy nodes in the device
- * @property {number | undefined} read_period - Read period of the device (if not applicable is undefined)
+ * @property {number} enabled_nodes - Number of enabled nodes in the device
+ * @property {number} ok_nodes - Number of healthy nodes in the device
+ * @property {number | undefined} read_period - Device read period in seconds, when applicable
+ * @property {string | undefined} broker_mode - MQTT broker mode, when applicable
+ * @property {number | undefined} stale_after - MQTT timeout in seconds before device data is considered stale, when applicable
  */
 export interface ExtendedDeviceInfo {
     protocol: Protocol;
@@ -206,6 +209,8 @@ export interface ExtendedDeviceInfo {
     enabled_nodes: number;
     ok_nodes: number;
     read_period?: number;
+    broker_mode?: string;
+    stale_after?: number;
 }
 
 /*****     T Y P E S     *****/

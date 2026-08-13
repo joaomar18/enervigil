@@ -383,14 +383,35 @@
                         {/if}
                     </InlineLoader>
                 </div>
+                <!-- OPC UA AND MQTT SPECIFIC FIELDS-->
                 <InlineLoader loaded={!deviceExtendedInfoLoading}>
-                    {#if !deviceExtendedInfoLoading || deviceExtendedInfo?.read_period != undefined}
+                    {#if !deviceExtendedInfoLoading && deviceExtendedInfo?.read_period != undefined}
                         <div class="row">
                             <span class="label">{$texts.readPeriod}</span>
                             <span class="value align-right">{deviceExtendedInfo?.read_period} s</span>
                         </div>
                     {/if}
                 </InlineLoader>
+                <!------------------------------------>
+                <!-- MQTT SPECIFIC FIELDS -->
+                <InlineLoader loaded={!deviceExtendedInfoLoading}>
+                    {#if !deviceExtendedInfoLoading && deviceExtendedInfo?.broker_mode != undefined}
+                        <div class="row">
+                            <span class="label">{$texts.brokerMode}</span>
+                            <span class="value align-right">{deviceExtendedInfo?.broker_mode}</span>
+                        </div>
+                    {/if}
+                </InlineLoader>
+
+                <InlineLoader loaded={!deviceExtendedInfoLoading}>
+                    {#if !deviceExtendedInfoLoading && deviceExtendedInfo?.stale_after != undefined}
+                        <div class="row">
+                            <span class="label">{$texts.staleAfter}</span>
+                            <span class="value align-right">{deviceExtendedInfo?.stale_after} s</span>
+                        </div>
+                    {/if}
+                </InlineLoader>
+                <!------------------------------------>
             </div>
         </main>
     </RightPanelSheet>
