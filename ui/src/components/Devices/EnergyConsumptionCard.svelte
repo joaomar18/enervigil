@@ -45,6 +45,7 @@
     let currentTimeSpans: SlidingWindow<EnergyConsumptionTimeSpan> = new SlidingWindow(10);
     let goBackEnabled: boolean = false;
     let nextRequestTimeout: ReturnType<typeof setTimeout> | null = null;
+    $: console.log(mergedGlobalMetrics);
 
     // Reactive Statements
     $: if (!energyConsumptionFirstFetch) {
