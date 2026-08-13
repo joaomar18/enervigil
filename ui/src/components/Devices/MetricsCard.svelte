@@ -33,6 +33,7 @@
     let selectedTimeSpan: LogSpanPeriod = LogSpanPeriod.currentDay;
     let initialDate: Date;
     let endDate: Date;
+    let initialPhaseSet: boolean = false;
     let metricsFetched: boolean = false;
     let metricsData: Record<string, any> = {};
     let metricsFirstFetch: boolean = false;
@@ -43,8 +44,9 @@
         getInitialMetrics();
     }
 
-    $: if (availablePhases) {
+    $: if (!initialPhaseSet && availablePhases) {
         setInitialElectricalPhaseTo3F(availablePhases);
+        initialPhaseSet = true;
     }
 
     // Functions

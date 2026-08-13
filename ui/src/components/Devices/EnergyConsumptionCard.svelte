@@ -38,6 +38,7 @@
     let selectedTimeSpan: LogSpanPeriod = LogSpanPeriod.currentDay;
     let initialDate: Date;
     let endDate: Date;
+    let initialPhaseSet: boolean = false;
     let energyConsumptionFetched: boolean = false;
     let energyConsumptionFirstFetch: boolean = false;
     let showGraphFullScreen: boolean = false;
@@ -50,8 +51,9 @@
         getInitialEnergyConsumption();
     }
 
-    $: if (availablePhases) {
+    $: if (!initialPhaseSet && availablePhases) {
         setInitialElectricalPhaseTo3F(availablePhases);
+        initialPhaseSet = true;
     }
 
     // Functions

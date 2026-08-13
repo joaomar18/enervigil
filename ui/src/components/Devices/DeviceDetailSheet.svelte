@@ -144,6 +144,7 @@
     let deviceExtendedInfoFirstFetch: boolean = false;
     let deviceExtendedInfoLoading: boolean = false;
     let deviceExtendedInfoTimeout: ReturnType<typeof setTimeout> | null = null;
+    $: console.log(deviceExtendedInfo);
 
     // Reactive Statements
     $: if (!showPanel) {
