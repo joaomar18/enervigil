@@ -34,14 +34,13 @@
     let mergedGlobalMetrics: EnergyConsumptionMetrics;
     let mobileView = false;
     let selectedEnergyDirection: EnergyDirectionFilter = EnergyDirectionFilter.TOTAL;
-    let selectedElectricalPhase: SelectablePhaseFilter = SelectablePhaseFilter.TOTAL;
+    let selectedElectricalPhase: SelectablePhaseFilter = SelectablePhaseFilter.SINGLEPHASE;
     let selectedTimeSpan: LogSpanPeriod = LogSpanPeriod.currentDay;
     let initialDate: Date;
     let endDate: Date;
     let energyConsumptionFetched: boolean = false;
     let energyConsumptionFirstFetch: boolean = false;
     let showGraphFullScreen: boolean = false;
-    let usePhase: boolean = false;
     let currentTimeSpans: SlidingWindow<EnergyConsumptionTimeSpan> = new SlidingWindow(10);
     let goBackEnabled: boolean = false;
     let nextRequestTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -51,7 +50,7 @@
         getInitialEnergyConsumption();
     }
     $: if (availablePhases) {
-        usePhase = !availablePhases.includes(NodePhase.SINGLEPHASE);
+        if (!availablePhases.includes(NodePhase.SINGLEPHASE)) selectedElectricalPhase = SelectablePhaseFilter.TOTAL;
     }
 
     // Functions
@@ -231,7 +230,6 @@
                     bind:selectedTimeSpan
                     bind:initialDate
                     bind:endDate
-                    {usePhase}
                     changePhase={(selectedPhase: SelectablePhaseFilter) => getNewElectricalPhase(selectedPhase)}
                     changeEnergyDirection={(selectedDirection: EnergyDirectionFilter) => getNewEnergyDirection(selectedDirection)}
                     changeSpanPeriodCustom={(initial_date: Date, end_date: Date) => getNewTimeSpan(initial_date, end_date)}
@@ -261,7 +259,6 @@
                 bind:initialDate
                 bind:endDate
                 bind:showFullScreen={showGraphFullScreen}
-                {usePhase}
                 dataFetched={energyConsumptionFetched}
                 firstFetch={energyConsumptionFirstFetch}
                 globalMetrics={mergedGlobalMetrics}

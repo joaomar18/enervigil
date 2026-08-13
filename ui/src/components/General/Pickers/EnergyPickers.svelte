@@ -31,7 +31,6 @@
     export let selectedTimeSpan: LogSpanPeriod | undefined = undefined;
     export let initialDate: Date | undefined = undefined;
     export let endDate: Date | undefined = undefined;
-    export let usePhase: boolean = true;
     export let useDirection: boolean = true;
     export let useTimeSpan: boolean = true;
     export let showCurrentTimeSpan: boolean = true;
@@ -117,7 +116,7 @@
         alignType="right"
     >
         <div class="content">
-            {#if usePhase}
+            {#if selectedPhase !== SelectablePhaseFilter.SINGLEPHASE}
                 <div class="phase-selection-div">
                     <h3>{$texts.phase}</h3>
                     <Selector

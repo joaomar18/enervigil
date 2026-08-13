@@ -22,13 +22,15 @@ export interface ColumnVisibilityMap {
 
 /**
  * Phase filter options available for selection in the UI.
- * Used for filtering node data by phase (L1, L2, L3) or viewing aggregated totals.
+ * Used for filtering node data by individual phase (L1, L2, L3),
+ * aggregated totals, or single-phase measurements.
  */
 export enum SelectablePhaseFilter {
     L1 = "L1",
     L2 = "L2",
     L3 = "L3",
     TOTAL = "Total",
+    SINGLEPHASE = "Singlephase"
 }
 
 /**

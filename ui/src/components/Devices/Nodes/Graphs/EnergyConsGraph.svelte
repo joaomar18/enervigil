@@ -50,7 +50,6 @@
     export let powerFactorDecimalPlaces: number | null = null;
     export let selectedPhase: SelectablePhaseFilter | undefined = undefined;
     export let selectedDirection: EnergyDirectionFilter | undefined = undefined;
-    export let usePhase: boolean = false;
     export let baseContainerWidth: number | null = null;
 
     // Merged style
@@ -177,7 +176,6 @@
                 bind:selectedPhase
                 bind:selectedDirection
                 bind:selectedTimeSpan
-                {usePhase}
                 {activeEnergyUnit}
                 {reactiveEnergyUnit}
                 {activeEnergyDecimalPlaces}

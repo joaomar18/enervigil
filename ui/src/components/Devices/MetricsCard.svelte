@@ -29,14 +29,13 @@
 
     // Variables
     let mobileView = false;
-    let selectedElectricalPhase: SelectablePhaseFilter = SelectablePhaseFilter.TOTAL;
+    let selectedElectricalPhase: SelectablePhaseFilter = SelectablePhaseFilter.SINGLEPHASE;
     let selectedTimeSpan: LogSpanPeriod = LogSpanPeriod.currentDay;
     let initialDate: Date;
     let endDate: Date;
     let metricsFetched: boolean = false;
     let metricsData: Record<string, any> = {};
     let metricsFirstFetch: boolean = false;
-    let usePhase: boolean = false;
     let nextRequestTimeout: ReturnType<typeof setTimeout> | null = null;
 
     // Reactive Statements
@@ -45,7 +44,7 @@
     }
 
     $: if (availablePhases) {
-        usePhase = !availablePhases.includes(NodePhase.SINGLEPHASE);
+        if (!availablePhases.includes(NodePhase.SINGLEPHASE)) selectedElectricalPhase = SelectablePhaseFilter.TOTAL;
     }
 
     // Functions
@@ -174,7 +173,6 @@
                     bind:selectedTimeSpan
                     bind:initialDate
                     bind:endDate
-                    {usePhase}
                     useDirection={false}
                     changePhase={(selectedPhase: SelectablePhaseFilter) => getNewElectricalPhase(selectedPhase)}
                     changeSpanPeriodCustom={(initial_date: Date, end_date: Date) => getNewTimeSpan(initial_date, end_date)}

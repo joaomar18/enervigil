@@ -27,7 +27,6 @@
     export let selectedTimeSpan: LogSpanPeriod;
     export let selectedPhase: SelectablePhaseFilter | undefined = undefined;
     export let selectedDirection: EnergyDirectionFilter | undefined = undefined;
-    export let usePhase: boolean = false;
 
     // Constants
     const HIDE_CURRENT_TIME_SPAN_MIN_WIDTH = 880;
@@ -65,7 +64,6 @@
         fullScreen={true}
         showDateChecker={false}
         showDatePicker={false}
-        {usePhase}
         bind:showFullScreen={show}
         bind:selectedPhase
         bind:selectedDirection
@@ -96,7 +94,6 @@
                 bind:selectedTimeSpan
                 bind:initialDate
                 bind:endDate
-                {usePhase}
                 {showCurrentTimeSpan}
                 changePhase={(selectedPhase: SelectablePhaseFilter) => changePhase(selectedPhase)}
                 changeEnergyDirection={(selectedDirection: EnergyDirectionFilter) => changeEnergyDirection(selectedDirection)}
