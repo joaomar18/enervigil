@@ -40,13 +40,13 @@
     let nextRequestTimeout: ReturnType<typeof setTimeout> | null = null;
 
     // Reactive Statements
-    $: if (!metricsFirstFetch) {
-        getInitialMetrics();
-    }
-
     $: if (!initialPhaseSet && availablePhases) {
         setInitialElectricalPhaseTo3F(availablePhases);
         initialPhaseSet = true;
+    }
+
+    $: if (!metricsFirstFetch && initialPhaseSet) {
+        getInitialMetrics();
     }
 
     // Functions

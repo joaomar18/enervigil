@@ -45,16 +45,15 @@
     let currentTimeSpans: SlidingWindow<EnergyConsumptionTimeSpan> = new SlidingWindow(10);
     let goBackEnabled: boolean = false;
     let nextRequestTimeout: ReturnType<typeof setTimeout> | null = null;
-    $: console.log(mergedGlobalMetrics);
 
     // Reactive Statements
-    $: if (!energyConsumptionFirstFetch) {
-        getInitialEnergyConsumption();
-    }
-
     $: if (!initialPhaseSet && availablePhases) {
         setInitialElectricalPhaseTo3F(availablePhases);
         initialPhaseSet = true;
+    }
+
+    $: if (!energyConsumptionFirstFetch && initialPhaseSet) {
+        getInitialEnergyConsumption();
     }
 
     // Functions
@@ -137,8 +136,6 @@
             return;
         }
         energyConsumptionFetched = false;
-        console.log(selectedElectricalPhase);
-        console.log(selectedEnergyDirection);
         let result = await getEnergyConsumptionAPI(
             deviceId,
             selectedElectricalPhase,
