@@ -49,8 +49,9 @@
     $: if (!energyConsumptionFirstFetch) {
         getInitialEnergyConsumption();
     }
+
     $: if (availablePhases) {
-        if (!availablePhases.includes(NodePhase.SINGLEPHASE)) selectedElectricalPhase = SelectablePhaseFilter.TOTAL;
+        setInitialElectricalPhaseTo3F(availablePhases);
     }
 
     // Functions
@@ -65,6 +66,10 @@
             phase: selectedElectricalPhase,
             direction: selectedEnergyDirection,
         } as EnergyConsumptionTimeSpan);
+    }
+
+    function setInitialElectricalPhaseTo3F(availablePhases: Array<NodePhase>): void {
+        if (!availablePhases.includes(NodePhase.SINGLEPHASE)) selectedElectricalPhase = SelectablePhaseFilter.TOTAL;
     }
 
     function setDateSpan(dateSpan: { initial_date: Date; end_date: Date }): void {

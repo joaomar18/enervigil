@@ -44,7 +44,7 @@
     }
 
     $: if (availablePhases) {
-        if (!availablePhases.includes(NodePhase.SINGLEPHASE)) selectedElectricalPhase = SelectablePhaseFilter.TOTAL;
+        setInitialElectricalPhaseTo3F(availablePhases);
     }
 
     // Functions
@@ -52,6 +52,10 @@
         let { initial_date, end_date } = getTimeSpanFromLogPeriod(selectedTimeSpan);
         setDateSpan({ initial_date, end_date });
         loadMetrics();
+    }
+
+    function setInitialElectricalPhaseTo3F(availablePhases: Array<NodePhase>): void {
+        if (!availablePhases.includes(NodePhase.SINGLEPHASE)) selectedElectricalPhase = SelectablePhaseFilter.TOTAL;
     }
 
     function setDateSpan(dateSpan: { initial_date: Date; end_date: Date }): void {
