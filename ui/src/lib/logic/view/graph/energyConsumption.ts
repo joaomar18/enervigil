@@ -261,7 +261,7 @@ export class EnergyConsumptionGraphObject extends BaseGraphObject<EnergyConsumpt
         const { ctx } = u;
         ctx.save();
         this.points.forEach((point, idx) => {
-            if (point.active_energy === null || point.reactive_energy === null) {
+            if (point.active_energy === null && point.reactive_energy === null) {
                 return;
             }
 
@@ -270,23 +270,32 @@ export class EnergyConsumptionGraphObject extends BaseGraphObject<EnergyConsumpt
             ctx.lineWidth = Number(style.barBorderWidthPx);
             const x1 = u.valToPos(idx, "x", true);
             const x2 = u.valToPos(idx + 1, "x", true);
-            const yMinActive = u.valToPos(0, "y", true);
-            const yMaxActive = u.valToPos(point.active_energy || 0, "y", true);
-            const yMinReactive = u.valToPos(0, "y", true);
-            const yMaxReactive = u.valToPos(point.reactive_energy || 0, "y", true);
-            const width = (x2 - x1) / 2;
-            const heightActive = yMinActive - yMaxActive;
-            const heightReactive = yMinReactive - yMaxReactive;
+            const yMin = u.valToPos(0, "y", true);
+            const width = x2 - x1;
+            const barWidth = point.active_energy !== null && point.reactive_energy !== null ? width / 2 : width;
 
-            // Bars
-            ctx.fillStyle = isHover ? String(style.activeEnergybarHoverColor) : String(style.activeEnergybarColor);
-            ctx.strokeStyle = isHover ? String(style.activeEnergybarBorderHoverColor) : String(style.activeEnergybarBorderColor);
-            ctx.fillRect(x1, yMaxActive, width, heightActive);
-            ctx.strokeRect(x1, yMaxActive, width, heightActive);
-            ctx.fillStyle = isHover ? String(style.reactiveEnergybarHoverColor) : String(style.reactiveEnergybarColor);
-            ctx.strokeStyle = isHover ? String(style.reactiveEnergybarBorderHoverColor) : String(style.reactiveEnergybarBorderColor);
-            ctx.fillRect(x1 + width, yMaxReactive, width, heightReactive);
-            ctx.strokeRect(x1 + width, yMaxReactive, width, heightReactive);
+            // Active energy bar
+            if (point.active_energy !== null) {
+                const yMaxActive = u.valToPos(point.active_energy, "y", true);
+                const heightActive = yMin - yMaxActive;
+
+                ctx.fillStyle = isHover ? String(style.activeEnergybarHoverColor) : String(style.activeEnergybarColor);
+                ctx.strokeStyle = isHover ? String(style.activeEnergybarBorderHoverColor) : String(style.activeEnergybarBorderColor);
+                ctx.fillRect(x1, yMaxActive, barWidth, heightActive);
+                ctx.strokeRect(x1, yMaxActive, barWidth, heightActive);
+            }
+
+            // Reactive energy bar
+            if (point.reactive_energy !== null) {
+                const yMaxReactive = u.valToPos(point.reactive_energy, "y", true);
+                const heightReactive = yMin - yMaxReactive;
+                const xReactive = point.active_energy !== null ? x1 + barWidth : x1;
+
+                ctx.fillStyle = isHover ? String(style.reactiveEnergybarHoverColor) : String(style.reactiveEnergybarColor);
+                ctx.strokeStyle = isHover ? String(style.reactiveEnergybarBorderHoverColor) : String(style.reactiveEnergybarBorderColor);
+                ctx.fillRect(xReactive, yMaxReactive, barWidth, heightReactive);
+                ctx.strokeRect(xReactive, yMaxReactive, barWidth, heightReactive);
+            }
         });
         ctx.restore();
     }
@@ -296,6 +305,6 @@ export class EnergyConsumptionGraphObject extends BaseGraphObject<EnergyConsumpt
      */
     pointNoData(index: number): boolean {
         if (!this.points || index < 0 || index >= this.points.length) return false;
-        return this.points[index].active_energy === null || this.points[index].reactive_energy === null;
+        return this.points[index].active_energy === null && this.points[index].reactive_energy === null;
     }
 }

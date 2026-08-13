@@ -211,8 +211,18 @@
         <div class="unit-div">
             <div class="unit-content">
                 <div class="unit-wrapper">
-                    {#if graphCreated && !activeEnergyNoData}
-                        <span class="unit-label">{activeEnergyUnit} | {reactiveEnergyUnit}</span>
+                    {#if graphCreated && (!activeEnergyNoData || !reactiveEnergyNoData)}
+                        <span class="unit-label">
+                            {#if !activeEnergyNoData}
+                                {activeEnergyUnit}
+                            {/if}
+                            {#if !activeEnergyNoData && !reactiveEnergyNoData}
+                                {" | "}
+                            {/if}
+                            {#if !reactiveEnergyNoData}
+                                {reactiveEnergyUnit}
+                            {/if}
+                        </span>
                     {/if}
                 </div>
             </div>
@@ -220,7 +230,7 @@
         <div class="graph-div" bind:this={graphContainer}>
             <div class="y-axis-inner-div">
                 <div class="y-axis-inner-content">
-                    {#if graphCreated && activeEnergyNoData}
+                    {#if graphCreated && activeEnergyNoData && reactiveEnergyNoData}
                         <span class="no-data-label">{$texts.noDataAvailable}</span>
                     {/if}
                 </div>
