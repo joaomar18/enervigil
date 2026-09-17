@@ -7,7 +7,7 @@ import math
 
 #############LOCAL IMPORTS#############
 
-from app.controller.node.processor.numeric_processor import NumericNodeProcessor
+from controller.node.processor.numeric_processor import NumericNodeProcessor
 from model.controller.device import EnergyMeterOptions, PowerFactorDirection
 from model.controller.node import CounterMode
 from controller.node.node import Node
