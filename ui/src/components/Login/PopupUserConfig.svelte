@@ -99,10 +99,9 @@ with inline errors and toast-based feedback.
                     {#if $displayToast}
                         <FormAlert
                             style={$LoginFormAlertStyle}
-                            asToast={true}
+                            enableCloseButton={true}
                             animation={"slide"}
                             width="90%"
-                            topPos="20px"
                             alertText={$activeAlertTexts[$toastKey]}
                             alertType={$toastType}
                             alertVariables={$toastVariables}

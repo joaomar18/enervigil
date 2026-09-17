@@ -7,7 +7,7 @@
     import EnergyPickers from "../General/Pickers/EnergyPickers.svelte";
     import ExpandableSection from "../General/ExpandableSection.svelte";
     import { mapMetricsAPI } from "$lib/logic/api/nodes";
-    import { getTimeSpanFromLogPeriod } from "$lib/logic/util/date";
+    import { getUpdatedTimeSpan } from "$lib/logic/util/date";
     import { LogSpanPeriod } from "$lib/types/view/nodes";
     import { SelectablePhaseFilter } from "$lib/types/view/nodes";
     import { NodePhase } from "$lib/types/nodes/base";
@@ -38,6 +38,7 @@
     let metricsData: Record<string, any> = {};
     let metricsFirstFetch: boolean = false;
     let nextRequestTimeout: ReturnType<typeof setTimeout> | null = null;
+    let destroyed = false;
 
     // Reactive Statements
     $: if (!initialPhaseSet && availablePhases) {
@@ -51,8 +52,6 @@
 
     // Functions
     function getInitialMetrics(): void {
-        let { initial_date, end_date } = getTimeSpanFromLogPeriod(selectedTimeSpan);
-        setDateSpan({ initial_date, end_date });
         loadMetrics();
     }
 
@@ -60,22 +59,16 @@
         if (!availablePhases.includes(NodePhase.SINGLEPHASE)) selectedElectricalPhase = SelectablePhaseFilter.TOTAL;
     }
 
-    function setDateSpan(dateSpan: { initial_date: Date; end_date: Date }): void {
-        initialDate = dateSpan.initial_date;
-        endDate = dateSpan.end_date;
-    }
-
     function getNewTimeSpan(initial_date: Date, end_date: Date): void {
-        setDateSpan({ initial_date, end_date });
-        loadMetrics();
         selectedTimeSpan = LogSpanPeriod.customDate;
+        initialDate = initial_date;
+        endDate = end_date;
+        loadMetrics();
     }
 
     function getNewDefaultTimeSpan(timeSpan: LogSpanPeriod): void {
-        let { initial_date, end_date } = getTimeSpanFromLogPeriod(timeSpan);
-        setDateSpan({ initial_date, end_date });
-        loadMetrics();
         selectedTimeSpan = timeSpan;
+        loadMetrics();
     }
 
     function getNewElectricalPhase(selectedPhase: SelectablePhaseFilter): void {
@@ -84,13 +77,17 @@
     }
 
     async function loadMetrics() {
+        if (destroyed) return;
         let deviceId = getDeviceID();
         if (!deviceId) {
             return;
         }
+        const updatedTimeSpan = getUpdatedTimeSpan(selectedTimeSpan, initialDate, endDate);
+        if (updatedTimeSpan) ({ initialDate, endDate } = updatedTimeSpan);
         metricsFetched = false;
         for (const metric of Object.keys(expandedState)) {
             let result = await mapMetricsAPI(metric, deviceId, selectedElectricalPhase, initialDate, endDate);
+            if (destroyed) return;
             if (result !== null) {
                 metricsData[metric] = result;
                 metricsFetched = true;
@@ -130,6 +127,7 @@
     });
 
     onDestroy(() => {
+        destroyed = true;
         APICaller.removeOnResumeListener(loadMetrics);
         window.removeEventListener("resize", getMobileView);
         if (nextRequestTimeout !== null) {

@@ -243,6 +243,78 @@ def test_submit_log_counter_includes_scaled_value():
     assert log["value"] == pytest.approx(2000.0)
 
 
+@pytest.mark.parametrize(
+    "node_type,unit,readings,expected_logs",
+    [
+        (NodeType.INT, "Wh", [100, 110, 115, 125, 125, 125], [10, 15, 0]),
+        (NodeType.FLOAT, "Wh", [100.1, 110.2, 115.4, 125.6, 125.6, 125.6], [10.1, 15.4, 0]),
+        (NodeType.FLOAT, "kWh", [0.1, 0.11, 0.115, 0.125, 0.125, 0.125], [10, 15, 0]),
+    ],
+)
+def test_cumulative_counter_preserves_consumption_across_logging_periods(node_type, unit, readings, expected_logs):
+    node = make_node(type=node_type, unit=unit, is_counter=True, counter_mode=CounterMode.CUMULATIVE)
+    start = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    logged_values = []
+
+    for period in range(3):
+        node.processor.set_value(readings[period * 2])
+        node.processor.set_value(readings[period * 2 + 1])
+        log = node.processor.submit_log(start + timedelta(minutes=15 * (period + 1)))
+        logged_values.append(log["value"])
+
+    assert logged_values == pytest.approx(expected_logs)
+    assert sum(logged_values) == pytest.approx(sum(expected_logs))
+
+
+@pytest.mark.parametrize("disconnected", [False, True])
+def test_cumulative_counter_empty_periods_do_not_repeat_consumption(disconnected):
+    node = make_node(unit="Wh", is_counter=True, counter_mode=CounterMode.CUMULATIVE)
+    start = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    assert node.processor.submit_log(start)["value"] is None
+
+    node.processor.set_value(100)
+    node.processor.set_value(110)
+    assert node.processor.submit_log(start + timedelta(minutes=15))["value"] == 10
+    assert node.processor.value == 10  # Keep the last value available for display.
+    if disconnected:
+        node.processor.set_value(None)
+
+    assert node.processor.submit_log(start + timedelta(minutes=30))["value"] is None
+    assert node.processor.submit_log(start + timedelta(minutes=45))["value"] is None
+
+    node.processor.set_value(125)
+    assert node.processor.submit_log(start + timedelta(minutes=60))["value"] == 15
+
+
+def test_cumulative_counter_keeps_baseline_when_parent_resets_unlogged_node():
+    node = make_node(unit="Wh", is_counter=True, counter_mode=CounterMode.CUMULATIVE)
+    node.processor.set_value(100)
+    node.processor.set_value(110)
+
+    # Logging a total also resets its phase/directional nodes without submitting their own logs.
+    node.processor.reset_value()
+    node.processor.reset_value()
+    node.processor.set_value(115)
+    assert node.processor.value == 5
+    node.processor.set_value(125)
+    assert node.processor.value == 15
+
+
+@pytest.mark.parametrize("mode,expected_logs", [(CounterMode.DELTA, [25, 13]), (CounterMode.DIRECT, [15, 8])])
+def test_other_counter_modes_keep_their_logging_behavior(mode, expected_logs):
+    node = make_node(unit="Wh", is_counter=True, counter_mode=mode)
+    start = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    node.processor.set_value(10)
+    node.processor.set_value(15)
+    first = node.processor.submit_log(start)
+    assert node.processor.submit_log(start + timedelta(minutes=15))["value"] is None
+
+    node.processor.set_value(5)
+    node.processor.set_value(8)
+    second = node.processor.submit_log(start + timedelta(minutes=30))
+    assert [first["value"], second["value"]] == expected_logs
+
+
 def test_submit_log_non_counter_resets_stats_but_keeps_last_value():
     node = make_node(decimal_places=2, logging=True)
     assert isinstance(node.processor, FloatNodeProcessor)

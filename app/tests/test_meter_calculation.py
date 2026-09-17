@@ -92,6 +92,128 @@ def test_reactive_power_from_voltage_current_power_factor():
     assert target.processor.value == pytest.approx(2300 * 0.6, rel=1e-3)
 
 
+@pytest.mark.parametrize(
+    "power_type,unit,preferred,primary_value,fallback_value",
+    [
+        ("apparent", "kVA", ("active_power", "reactive_power"), 5, 2.3),
+        ("active", "kW", ("apparent_power", "reactive_power"), 3, 1.84),
+        ("reactive", "kVAr", ("apparent_power", "active_power"), 4, 1.38),
+    ],
+)
+@pytest.mark.parametrize("missing_indices", [(0,), (1,), (0, 1)])
+def test_power_falls_back_when_configured_power_readings_are_missing(
+    power_type, unit, preferred, primary_value, fallback_value, missing_indices
+):
+    readings = {
+        "voltage": ("kV", 0.23),
+        "current": ("A", 10),
+        "power_factor": ("", 0.8),
+        "active_power": ("kW", 3),
+        "reactive_power": ("kVAr", 4),
+        "apparent_power": ("kVA", 5),
+    }
+    nodes = {}
+    for name, (source_unit, value) in readings.items():
+        source = make_node(f"l1_{name}", unit=source_unit)
+        source.processor.set_value(value)
+        nodes[f"l1_{name}"] = source
+    target = make_node(f"l1_{power_type}_power", unit=unit)
+
+    meter_calc.calculate_power("l1_", power_type, target, nodes)
+    assert target.processor.value == pytest.approx(primary_value)
+
+    for index in missing_indices:
+        nodes[f"l1_{preferred[index]}"].processor.set_value(None)
+    meter_calc.calculate_power("l1_", power_type, target, nodes)
+    assert target.processor.value == pytest.approx(fallback_value)
+
+    nodes["l1_current"].processor.set_value(None)
+    meter_calc.calculate_power("l1_", power_type, target, nodes)
+    assert target.processor.value is None
+
+    for name in preferred:
+        nodes[f"l1_{name}"].processor.set_value(readings[name][1])
+    meter_calc.calculate_power("l1_", power_type, target, nodes)
+    assert target.processor.value == pytest.approx(primary_value)
+
+    nodes["l1_current"].processor.set_value(10)
+    for name in preferred:
+        nodes[f"l1_{name}"].processor.set_value(0)
+    meter_calc.calculate_power("l1_", power_type, target, nodes)
+    assert target.processor.value == 0
+
+
+@pytest.mark.parametrize(
+    "power_type,unit,source_name,source_unit,fallback_value",
+    [
+        ("active", "kW", "reactive_power", "VAr", 1.84),
+        ("reactive", "kVAr", "active_power", "W", 1.38),
+    ],
+)
+@pytest.mark.parametrize(
+    "source_value,primary_value",
+    [
+        (600, 0.8), (-600, 0.8), (1000, 0), (-1000, 0),
+        (1000.000001, None), (-1000.000001, None), (1500, None), (-1500, None),
+    ],
+)
+@pytest.mark.parametrize("with_fallback", [False, True])
+def test_power_handles_inconsistent_apparent_power_without_stale_values(
+    power_type, unit, source_name, source_unit, fallback_value, source_value, primary_value, with_fallback
+):
+    apparent = make_node("l1_apparent_power", unit="kVA")
+    apparent.processor.set_value(1)
+    source = make_node(f"l1_{source_name}", unit=source_unit)
+    source.processor.set_value(source_value)
+    nodes = {"l1_apparent_power": apparent, f"l1_{source_name}": source}
+    if with_fallback:
+        for name, source_unit, value in [("voltage", "kV", 0.23), ("current", "A", 10), ("power_factor", "", 0.8)]:
+            fallback_node = make_node(f"l1_{name}", unit=source_unit)
+            fallback_node.processor.set_value(value)
+            nodes[f"l1_{name}"] = fallback_node
+    target = make_node(f"l1_{power_type}_power", unit=unit)
+    target.processor.set_value(123)
+
+    meter_calc.calculate_power("l1_", power_type, target, nodes)
+
+    expected = fallback_value if primary_value is None and with_fallback else primary_value
+    if expected is None:
+        assert target.processor.value is None
+    else:
+        assert target.processor.value == pytest.approx(expected)
+
+    source.processor.set_value(600)
+    meter_calc.calculate_power("l1_", power_type, target, nodes)
+    assert target.processor.value == pytest.approx(0.8)
+
+
+@pytest.mark.parametrize("power_type,unit", [("active", "kW"), ("reactive", "kVAr")])
+@pytest.mark.parametrize(
+    "power_factor,active_value,reactive_value",
+    [
+        (0, 0, 2.3), (0.8, 1.84, 1.38), (1, 2.3, 0),
+        (-1, None, None), (-0.8, None, None), (-0.000001, None, None),
+        (-1.000001, None, None), (1.000001, None, None), (-1.2, None, None), (1.2, None, None),
+    ],
+)
+def test_voltage_current_power_requires_valid_power_factor(power_type, unit, power_factor, active_value, reactive_value):
+    nodes = {}
+    for name, source_unit, value in [("voltage", "kV", 0.23), ("current", "A", 10), ("power_factor", "", power_factor)]:
+        source = make_node(f"l1_{name}", unit=source_unit)
+        source.processor.set_value(value)
+        nodes[f"l1_{name}"] = source
+    target = make_node(f"l1_{power_type}_power", unit=unit)
+    target.processor.set_value(123)
+
+    meter_calc.calculate_power("l1_", power_type, target, nodes)
+
+    expected = active_value if power_type == "active" else reactive_value
+    if expected is None:
+        assert target.processor.value is None
+    else:
+        assert target.processor.value == pytest.approx(expected)
+
+
 def test_power_missing_dependencies_leaves_value_none():
     target = make_node("l1_active_power")
     meter_calc.calculate_power("l1_", "active", target, {})

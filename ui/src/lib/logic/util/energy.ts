@@ -28,6 +28,7 @@ export function getPowerFactorDirectionString(pfDirection: string): string {
 /**
  * Converts electrical phase enum to a short display string for UI presentation.
  * Returns single-digit phase identifiers (1, 2, 3) or "T" for total/aggregate phase.
+ * Single-phase measurements use "1".
  * Used in phase selectors, charts, and metric displays.
  *
  * @param phase - The electrical phase filter enum value
@@ -35,6 +36,7 @@ export function getPowerFactorDirectionString(pfDirection: string): string {
  */
 export function getElectricalPhaseString(phase: SelectablePhaseFilter): string {
     switch (phase) {
+        case SelectablePhaseFilter.SINGLEPHASE:
         case SelectablePhaseFilter.L1:
             return "1";
         case SelectablePhaseFilter.L2:

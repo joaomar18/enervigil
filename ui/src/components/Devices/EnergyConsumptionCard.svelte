@@ -5,7 +5,7 @@
     import { SlidingWindow } from "$lib/logic/util/classes/SlidingWindow";
     import { NodePhase } from "$lib/types/nodes/base";
     import { EnergyDirectionFilter, LogSpanPeriod, SelectablePhaseFilter, type EnergyConsumptionTimeSpan } from "$lib/types/view/nodes";
-    import { getTimeSpanFromLogPeriod } from "$lib/logic/util/date";
+    import { getUpdatedTimeSpan } from "$lib/logic/util/date";
     import { getEnergyConsumptionAPI } from "$lib/logic/api/nodes";
     import Action from "../General/Action.svelte";
     import ContentCard from "../General/ContentCard.svelte";
@@ -45,6 +45,7 @@
     let currentTimeSpans: SlidingWindow<EnergyConsumptionTimeSpan> = new SlidingWindow(10);
     let goBackEnabled: boolean = false;
     let nextRequestTimeout: ReturnType<typeof setTimeout> | null = null;
+    let destroyed = false;
 
     // Reactive Statements
     $: if (!initialPhaseSet && availablePhases) {
@@ -58,8 +59,6 @@
 
     // Functions
     function getInitialEnergyConsumption(): void {
-        let { initial_date, end_date } = getTimeSpanFromLogPeriod(selectedTimeSpan);
-        setDateSpan({ initial_date, end_date });
         loadEnergyConsumption();
         addToCurrentTimeSpans({
             initial_date: initialDate,
@@ -74,13 +73,10 @@
         if (!availablePhases.includes(NodePhase.SINGLEPHASE)) selectedElectricalPhase = SelectablePhaseFilter.TOTAL;
     }
 
-    function setDateSpan(dateSpan: { initial_date: Date; end_date: Date }): void {
-        initialDate = dateSpan.initial_date;
-        endDate = dateSpan.end_date;
-    }
-
     function getNewTimeSpan(initial_date: Date, end_date: Date): void {
-        setDateSpan({ initial_date, end_date });
+        selectedTimeSpan = LogSpanPeriod.customDate;
+        initialDate = initial_date;
+        endDate = end_date;
         loadEnergyConsumption();
         addToCurrentTimeSpans({
             initial_date: initialDate,
@@ -89,12 +85,10 @@
             phase: selectedElectricalPhase,
             direction: selectedEnergyDirection,
         } as EnergyConsumptionTimeSpan);
-        selectedTimeSpan = LogSpanPeriod.customDate;
     }
 
     function getNewDefaultTimeSpan(timeSpan: LogSpanPeriod): void {
-        let { initial_date, end_date } = getTimeSpanFromLogPeriod(timeSpan);
-        setDateSpan({ initial_date, end_date });
+        selectedTimeSpan = timeSpan;
         loadEnergyConsumption();
         addToCurrentTimeSpans({
             initial_date: initialDate,
@@ -103,7 +97,6 @@
             phase: selectedElectricalPhase,
             direction: selectedEnergyDirection,
         } as EnergyConsumptionTimeSpan);
-        selectedTimeSpan = timeSpan;
     }
 
     function getNewElectricalPhase(selectedPhase: SelectablePhaseFilter): void {
@@ -131,10 +124,13 @@
     }
 
     async function loadEnergyConsumption() {
+        if (destroyed) return;
         let deviceId = getDeviceID();
         if (!deviceId) {
             return;
         }
+        const updatedTimeSpan = getUpdatedTimeSpan(selectedTimeSpan, initialDate, endDate);
+        if (updatedTimeSpan) ({ initialDate, endDate } = updatedTimeSpan);
         energyConsumptionFetched = false;
         let result = await getEnergyConsumptionAPI(
             deviceId,
@@ -144,6 +140,7 @@
             initialDate,
             endDate,
         ).call({ timeout: API_REQUEST_TIMEOUT_MS });
+        if (destroyed) return;
         if (result !== null) {
             energyLogs = result.energyLogs;
             mergedPoints = result.mergedPoints;
@@ -162,7 +159,8 @@
     function setTimeSpanToPrevious(): void {
         let previousNodeTimeSpan = currentTimeSpans.previous();
         if (!previousNodeTimeSpan) return;
-        setDateSpan({ initial_date: previousNodeTimeSpan.initial_date, end_date: previousNodeTimeSpan.end_date });
+        initialDate = previousNodeTimeSpan.initial_date;
+        endDate = previousNodeTimeSpan.end_date;
         selectedTimeSpan = previousNodeTimeSpan.log_span_period;
         selectedElectricalPhase = previousNodeTimeSpan.phase;
         selectedEnergyDirection = previousNodeTimeSpan.direction;
@@ -190,6 +188,7 @@
     });
 
     onDestroy(() => {
+        destroyed = true;
         APICaller.removeOnResumeListener(loadEnergyConsumption);
         window.removeEventListener("resize", handleWindowResize);
         if (nextRequestTimeout !== null) {

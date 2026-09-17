@@ -127,9 +127,10 @@ export function getTimeSpanFromLogPeriod(period: LogSpanPeriod): { initial_date:
 
     switch (period) {
         case LogSpanPeriod.currentHour:
-            initial_date.setMinutes(0, 0, 0);
-            end_date = new Date(initial_date);
-            end_date.setHours(end_date.getHours() + 1);
+            // Use elapsed time to preserve which repeated hour we are in during DST changes.
+            const elapsedInHour = initial_date.getMinutes() * 60_000 + initial_date.getSeconds() * 1000 + initial_date.getMilliseconds();
+            initial_date = new Date(initial_date.getTime() - elapsedInHour);
+            end_date = new Date(initial_date.getTime() + 3_600_000);
             return { initial_date, end_date };
 
         case LogSpanPeriod.currentDay:
@@ -164,6 +165,14 @@ export function getTimeSpanFromLogPeriod(period: LogSpanPeriod): { initial_date:
         default:
             throw new Error(`Invalid Log Span Period: ${period}`);
     }
+}
+
+/** Returns a refreshed preset range, or null for custom or unchanged dates. */
+export function getUpdatedTimeSpan(period: LogSpanPeriod, initialDate?: Date, endDate?: Date): { initialDate: Date; endDate: Date } | null {
+    if (period === LogSpanPeriod.customDate) return null;
+    const { initial_date, end_date } = getTimeSpanFromLogPeriod(period);
+    if (initialDate?.getTime() === initial_date.getTime() && endDate?.getTime() === end_date.getTime()) return null;
+    return { initialDate: initial_date, endDate: end_date };
 }
 
 /**

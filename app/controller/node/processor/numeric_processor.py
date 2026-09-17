@@ -41,6 +41,8 @@ class NumericNodeProcessor(NodeProcessor[N]):
 
         # Value and tracking
         self.initial_value: Optional[N] = None
+        # Keep the raw cumulative reading across logging resets.
+        self._last_cumulative_value: Optional[N] = None
         self.value: Optional[N] = None
         self.positive_direction = False
         self.negative_direction = False
@@ -108,7 +110,7 @@ class NumericNodeProcessor(NodeProcessor[N]):
 
     def reset_value(self) -> None:
         """
-        Resets all processor state including value, statistics, and directional tracking.
+        Resets period statistics and direction while retaining the last readings.
         """
 
         super().reset_value()
@@ -166,6 +168,8 @@ class NumericNodeProcessor(NodeProcessor[N]):
             if self.config.counter_mode is CounterMode.DELTA:
                 self.value = self.ZERO
                 self.initial_value = self.value
+            elif self.config.counter_mode is CounterMode.CUMULATIVE and self._last_cumulative_value is not None:
+                self.initial_value = self._last_cumulative_value
             else:
                 self.initial_value = value
 
@@ -181,6 +185,7 @@ class NumericNodeProcessor(NodeProcessor[N]):
         elif self.config.counter_mode is CounterMode.CUMULATIVE:
             new_value = value - self.initial_value
             delta = new_value - current_value
+            self._last_cumulative_value = value
         else:
             raise ValueError(f"Counter mode is not valid: {self.config.counter_mode}")
 

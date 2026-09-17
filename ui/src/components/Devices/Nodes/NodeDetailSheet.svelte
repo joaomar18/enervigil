@@ -10,7 +10,7 @@
     import { LogSpanPeriod } from "$lib/types/view/nodes";
     import { getNodePhaseSection, isDefault } from "$lib/logic/util/nodes";
     import { getNodeExtendedInfoAPI, getNodeLogsAPI } from "$lib/logic/api/nodes";
-    import { getTimeSpanFromLogPeriod } from "$lib/logic/util/date";
+    import { getUpdatedTimeSpan } from "$lib/logic/util/date";
     import { SlidingWindow } from "$lib/logic/util/classes/SlidingWindow";
     import type { NodeTimeSpan } from "$lib/types/view/nodes";
     import type { BaseNodeExtendedInfo, ProcessedNodeState } from "$lib/types/nodes/realtime";
@@ -217,21 +217,8 @@
     }
 
     function updateNodeLogs(): void {
-        if (!nodeLogsFirstFetch) {
-            let { initial_date, end_date } = loadDateSpan(selectedHistoryTimeSpan);
-            setDateSpan({ initial_date, end_date });
-        }
         loadNodeLogs();
         addToCurrentTimeSpans({ initial_date: initialDate, end_date: endDate, log_span_period: selectedHistoryTimeSpan } as NodeTimeSpan);
-    }
-
-    function loadDateSpan(timeSpan: LogSpanPeriod): { initial_date: Date; end_date: Date } {
-        return getTimeSpanFromLogPeriod(timeSpan);
-    }
-
-    function setDateSpan(dateSpan: { initial_date: Date; end_date: Date }): void {
-        initialDate = dateSpan.initial_date;
-        endDate = dateSpan.end_date;
     }
 
     function addToCurrentTimeSpans(nodeTimeSpan: NodeTimeSpan): void {
@@ -242,26 +229,26 @@
     function setDateSpanToPrevious(): void {
         let previousNodeTimeSpan = currentTimeSpans.previous();
         if (!previousNodeTimeSpan) return;
-        setDateSpan({ initial_date: previousNodeTimeSpan.initial_date, end_date: previousNodeTimeSpan.end_date });
+        selectedHistoryTimeSpan = previousNodeTimeSpan.log_span_period;
+        initialDate = previousNodeTimeSpan.initial_date;
+        endDate = previousNodeTimeSpan.end_date;
         loadNodeLogs();
         currentTimeSpans.confirmPrevious();
         enableGoBack = currentTimeSpans.hasPrevious();
-        selectedHistoryTimeSpan = previousNodeTimeSpan.log_span_period;
     }
 
     function loadNodeLogsWithSpanPeriod(timeSpan: LogSpanPeriod): void {
-        let { initial_date, end_date } = getTimeSpanFromLogPeriod(timeSpan);
-        setDateSpan({ initial_date, end_date });
-        loadNodeLogs();
-        addToCurrentTimeSpans({ initial_date, end_date, log_span_period: timeSpan } as NodeTimeSpan);
         selectedHistoryTimeSpan = timeSpan;
+        loadNodeLogs();
+        addToCurrentTimeSpans({ initial_date: initialDate, end_date: endDate, log_span_period: timeSpan } as NodeTimeSpan);
     }
 
     function loadNodeLogsWithCustomPeriod(initial_date: Date, end_date: Date): void {
-        setDateSpan({ initial_date, end_date });
+        selectedHistoryTimeSpan = LogSpanPeriod.customDate;
+        initialDate = initial_date;
+        endDate = end_date;
         loadNodeLogs();
         addToCurrentTimeSpans({ initial_date, end_date, log_span_period: LogSpanPeriod.customDate } as NodeTimeSpan);
-        selectedHistoryTimeSpan = LogSpanPeriod.customDate;
     }
 
     async function loadNodeLogs() {
@@ -269,6 +256,8 @@
         if (!deviceId || !nodeState) {
             return;
         }
+        const updatedTimeSpan = getUpdatedTimeSpan(selectedHistoryTimeSpan, initialDate, endDate);
+        if (updatedTimeSpan) ({ initialDate, endDate } = updatedTimeSpan);
         nodeLogsFetched = false;
         let result = await getNodeLogsAPI(deviceId, nodeState.name, nodeState.phase, initialDate !== null, initialDate, endDate).call({ timeout: 5000 });
         if (result !== null) {

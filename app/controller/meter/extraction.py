@@ -172,6 +172,12 @@ def get_meter_energy_consumption(
     global_reactive_value: Optional[int | float] = (
         reactive_energy_logs.global_metrics.get("value") if reactive_energy_logs.global_metrics else None
     )
+    # Empty counter logs have a zero total, but no measured energy for power factor.
+    if not any(point.get("value") is not None for point in active_energy_logs.points):
+        global_active_value = None
+    if not any(point.get("value") is not None for point in reactive_energy_logs.points):
+        global_reactive_value = None
+
     global_pf, global_pf_direction = meter_calc.calculate_pf_and_dir_with_energy(
         global_active_value * active_factor if global_active_value is not None else None,
         global_reactive_value * reactive_factor if global_reactive_value is not None else None,

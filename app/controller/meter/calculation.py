@@ -164,7 +164,7 @@ def _calculate_apparent_power(prefix: str, node: Node, meter_nodes: Dict[str, No
             scaled_q = calculation.get_scaled_value(q_value, q_node.config.unit)
             value = math.sqrt(scaled_p**2 + scaled_q**2)
 
-    elif value is None and v_node is not None and i_node is not None:
+    if value is None and v_node is not None and i_node is not None:
 
         v_value = meter_util.get_numeric_value(v_node)
         i_value = meter_util.get_numeric_value(i_node)
@@ -209,9 +209,11 @@ def _calculate_active_power(prefix: str, node: Node, meter_nodes: Dict[str, Node
 
             scaled_s = calculation.get_scaled_value(s_value, s_node.config.unit)
             scaled_q = calculation.get_scaled_value(q_value, q_node.config.unit)
-            value = math.sqrt(scaled_s**2 - scaled_q**2)
+            squared_value = scaled_s**2 - scaled_q**2
+            if squared_value >= 0:
+                value = math.sqrt(squared_value)
 
-    elif value is None and v_node is not None and i_node is not None and pf_node is not None:
+    if value is None and v_node is not None and i_node is not None and pf_node is not None:
 
         v_value = meter_util.get_numeric_value(v_node)
         i_value = meter_util.get_numeric_value(i_node)
@@ -222,7 +224,8 @@ def _calculate_active_power(prefix: str, node: Node, meter_nodes: Dict[str, Node
             scaled_v = calculation.get_scaled_value(v_value, v_node.config.unit)
             scaled_i = calculation.get_scaled_value(i_value, i_node.config.unit)
             scaled_pf = calculation.get_scaled_value(pf_value, pf_node.config.unit)
-            value = scaled_v * scaled_i * scaled_pf
+            if 0 <= scaled_pf <= 1:
+                value = scaled_v * scaled_i * scaled_pf
 
     scaled_value = calculation.apply_output_scaling(value, node.config.unit) if value is not None else None
     node.processor.set_value(scaled_value)
@@ -258,9 +261,11 @@ def _calculate_reactive_power(prefix: str, node: Node, meter_nodes: Dict[str, No
 
             scaled_s = calculation.get_scaled_value(s_value, s_node.config.unit)
             scaled_p = calculation.get_scaled_value(p_value, p_node.config.unit)
-            value = math.sqrt(scaled_s**2 - scaled_p**2)
+            squared_value = scaled_s**2 - scaled_p**2
+            if squared_value >= 0:
+                value = math.sqrt(squared_value)
 
-    elif value is None and v_node is not None and i_node is not None and pf_node is not None:
+    if value is None and v_node is not None and i_node is not None and pf_node is not None:
 
         v_value = meter_util.get_numeric_value(v_node)
         i_value = meter_util.get_numeric_value(i_node)
@@ -271,7 +276,8 @@ def _calculate_reactive_power(prefix: str, node: Node, meter_nodes: Dict[str, No
             scaled_v = calculation.get_scaled_value(v_value, v_node.config.unit)
             scaled_i = calculation.get_scaled_value(i_value, i_node.config.unit)
             scaled_pf = calculation.get_scaled_value(pf_value, pf_node.config.unit)
-            value = scaled_v * scaled_i * math.sin(math.acos(scaled_pf))
+            if 0 <= scaled_pf <= 1:
+                value = scaled_v * scaled_i * math.sin(math.acos(scaled_pf))
 
     scaled_value = calculation.apply_output_scaling(value, node.config.unit) if value is not None else None
     node.processor.set_value(scaled_value)
@@ -350,7 +356,7 @@ def calculate_pf_and_dir_with_energy(
 
     Returns:
         Tuple[Optional[float], Optional[PowerFactorDirection]]:
-            - power_factor (Optional[float]): Calculated power factor as a float, or None if input values are None or both zero.
+            - power_factor (Optional[float]): Magnitude from 0 to 1, or None if input values are None or both zero.
             - power_factor_direction (Optional[PowerFactorDirection]): Enum value indicating the direction of the power factor.
                 - PowerFactorDirection.UNITARY: if active energy exists and reactive energy is zero.
                 - PowerFactorDirection.LAGGING: if reactive energy is positive.
@@ -363,7 +369,7 @@ def calculate_pf_and_dir_with_energy(
 
     if active_energy_value is not None and reactive_energy_value is not None:
         if active_energy_value != 0 or reactive_energy_value != 0:
-            power_factor = active_energy_value / math.sqrt(math.pow(active_energy_value, 2) + math.pow(reactive_energy_value, 2))
+            power_factor = abs(active_energy_value) / math.sqrt(math.pow(active_energy_value, 2) + math.pow(reactive_energy_value, 2))
 
         if active_energy_value == 0 and reactive_energy_value == 0:
             power_factor_direction = PowerFactorDirection.UNKNOWN

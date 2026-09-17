@@ -395,22 +395,43 @@ def energy_device(active_unit="Wh", reactive_unit="VArh", missing=()) -> EnergyM
     [
         (3, 4, 0.6, PowerFactorDirection.LAGGING),
         (3, -4, 0.6, PowerFactorDirection.LEADING),
-        (-3, 4, -0.6, PowerFactorDirection.LAGGING),
+        (-3, 4, 0.6, PowerFactorDirection.LAGGING),
+        (-3, -4, 0.6, PowerFactorDirection.LEADING),
+        (-3, 0, 1, PowerFactorDirection.UNITARY),
         (3, 0, 1, PowerFactorDirection.UNITARY),
         (0, 4, 0, PowerFactorDirection.LAGGING),
         (0, 0, None, PowerFactorDirection.UNKNOWN),
     ],
 )
-def test_energy_power_factor_and_direction_follow_bucket_totals(database, active, reactive, pf, direction):
+@pytest.mark.parametrize("formatted", [False, True])
+def test_energy_power_factor_and_direction_follow_bucket_totals(database, active, reactive, pf, direction, formatted):
     db, queue = database
     queue([counter_row(active)])
     queue([counter_row(reactive)])
-    output = get_meter_energy_consumption(energy_device(), NodePhase.SINGLEPHASE, NodeDirection.TOTAL, db, make_span())
-    assert output["power_factor"]["points"][0]["value"] == pf
+    output = get_meter_energy_consumption(
+        energy_device(), NodePhase.SINGLEPHASE, NodeDirection.TOTAL, db, make_span(formatted=formatted)
+    )
     assert output["power_factor"]["global_metrics"]["value"] == pf
-    assert output["power_factor_direction"]["points"][0]["value"] == direction
     assert output["power_factor_direction"]["global_metrics"]["value"] == direction
-    assert output["power_factor"]["points"][1]["value"] is None
+    if formatted:
+        assert output["power_factor"]["points"][0]["value"] == pf
+        assert output["power_factor_direction"]["points"][0]["value"] == direction
+        assert output["power_factor"]["points"][1]["value"] is None
+
+
+@pytest.mark.parametrize("active,reactive", [(3, None), (None, 4), (None, None), (0, None), (None, 0)])
+@pytest.mark.parametrize("formatted", [False, True])
+def test_global_power_factor_requires_samples_from_both_energy_channels(database, active, reactive, formatted):
+    db, queue = database
+    queue([] if active is None else [counter_row(active)])
+    queue([] if reactive is None else [counter_row(reactive)])
+    output = get_meter_energy_consumption(
+        energy_device(), NodePhase.SINGLEPHASE, NodeDirection.TOTAL, db, make_span(formatted=formatted)
+    )
+    assert output["active_energy"]["global_metrics"]["value"] == (active if active is not None else 0)
+    assert output["reactive_energy"]["global_metrics"]["value"] == (reactive if reactive is not None else 0)
+    assert output["power_factor"]["global_metrics"]["value"] is None
+    assert output["power_factor_direction"]["global_metrics"]["value"] is None
 
 
 def test_global_power_factor_uses_energy_totals_instead_of_mean_of_bucket_factors(database):
