@@ -46,7 +46,7 @@
 
     // Functions
     function handleClick(event: MouseEvent): void {
-        if (fullscreenContainer && contentContainer && !contentContainer.contains(event.target as Node)) {
+        if (fullscreenContainer && contentContainer && !event.composedPath().includes(contentContainer)) {
             show = false;
         }
     }
