@@ -12,6 +12,8 @@ from model.date import TimeSpanParameters
 from db.timedb import TimeDBClient
 import controller.meter.calculation as meter_calc
 import util.functions.meter as meter_util
+import util.functions.calculation as calculation
+import util.functions.date as date
 
 #######################################
 
@@ -55,8 +57,12 @@ def get_meter_energy_consumption(
     active_energy_node_name = meter_util.create_node_name("active_energy", phase, direction)
     reactive_energy_node_name = meter_util.create_node_name("reactive_energy", phase, direction)
     pf_node_name = meter_util.create_node_name("power_factor", phase, None)
-    active_energy_node = next((n for n in device.meter_nodes.nodes.values() if n.config.name == active_energy_node_name), None)
-    reactive_energy_node = next((n for n in device.meter_nodes.nodes.values() if n.config.name == reactive_energy_node_name), None)
+    active_energy_node = next(
+        (n for n in device.meter_nodes.nodes.values() if n.config.name == active_energy_node_name), None
+    )
+    reactive_energy_node = next(
+        (n for n in device.meter_nodes.nodes.values() if n.config.name == reactive_energy_node_name), None
+    )
     pf_node = next((n for n in device.meter_nodes.nodes.values() if n.config.name == pf_node_name), None)
 
     if active_energy_node:
@@ -85,6 +91,32 @@ def get_meter_energy_consumption(
             time_step=time_span.time_step,
             global_metrics=meter_util.get_empty_log_global_metrics(numeric=True, incremental=True),
         )
+
+    # A later query may increase the shared step. Bring earlier results to that step too.
+    if time_span.formatted and time_span.start_time and time_span.end_time and time_span.time_step:
+        for logs in (active_energy_logs, reactive_energy_logs):
+            if logs.time_step != time_span.time_step:
+                buckets = date.get_aligned_time_buckets(
+                    time_span.start_time, time_span.end_time, time_span.time_step, time_span.time_zone
+                )
+                values: Dict[float, float] = {}
+                for point in logs.points:
+                    if point["value"] is not None:
+                        bucket_start = date.find_bucket_for_time(date.convert_isostr_to_date(point["start_time"]), buckets)
+                        key = bucket_start.timestamp()
+                        values[key] = values.get(key, 0) + point["value"]
+                logs.points = [
+                    {
+                        "start_time": date.to_iso_minutes(start),
+                        "end_time": date.to_iso_minutes(end),
+                        "value": values.get(start.timestamp()),
+                    }
+                    for start, end in buckets
+                ]
+                logs.time_step = time_span.time_step
+
+    active_factor = calculation.get_unit_factor(active_energy_logs.unit)
+    reactive_factor = calculation.get_unit_factor(reactive_energy_logs.unit)
 
     if pf_node:
         pf_dp = pf_node.config.decimal_places
@@ -119,10 +151,19 @@ def get_meter_energy_consumption(
         for active_point, reactive_point in zip(active_energy_logs.points, reactive_energy_logs.points):
             active_value: Optional[int | float] = active_point.get("value")
             reactive_value: Optional[int | float] = reactive_point.get("value")
-            (pf, pf_direction) = meter_calc.calculate_pf_and_dir_with_energy(active_value, reactive_value)
-            pf_logs.points.append({"start_time": active_point.get("start_time"), "end_time": active_point.get("end_time"), "value": pf})
+            pf, pf_direction = meter_calc.calculate_pf_and_dir_with_energy(
+                active_value * active_factor if active_value is not None else None,
+                reactive_value * reactive_factor if reactive_value is not None else None,
+            )
+            pf_logs.points.append(
+                {"start_time": active_point.get("start_time"), "end_time": active_point.get("end_time"), "value": pf}
+            )
             pf_direction_logs.points.append(
-                {"start_time": active_point.get("start_time"), "end_time": active_point.get("end_time"), "value": pf_direction}
+                {
+                    "start_time": active_point.get("start_time"),
+                    "end_time": active_point.get("end_time"),
+                    "value": pf_direction,
+                }
             )
 
     global_active_value: Optional[int | float] = (
@@ -131,7 +172,10 @@ def get_meter_energy_consumption(
     global_reactive_value: Optional[int | float] = (
         reactive_energy_logs.global_metrics.get("value") if reactive_energy_logs.global_metrics else None
     )
-    (global_pf, global_pf_direction) = meter_calc.calculate_pf_and_dir_with_energy(global_active_value, global_reactive_value)
+    global_pf, global_pf_direction = meter_calc.calculate_pf_and_dir_with_energy(
+        global_active_value * active_factor if global_active_value is not None else None,
+        global_reactive_value * reactive_factor if global_reactive_value is not None else None,
+    )
     if pf_logs.global_metrics:
         pf_logs.global_metrics["value"] = global_pf
     if pf_direction_logs.global_metrics:

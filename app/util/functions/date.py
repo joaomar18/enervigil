@@ -61,10 +61,10 @@ def get_date_from_timestamp(timestamp: int) -> datetime:
         timestamp: Unix timestamp in milliseconds.
 
     Returns:
-        datetime: Datetime object.
+        datetime: Timezone-aware UTC datetime.
     """
 
-    return datetime.fromtimestamp(timestamp / 1000)
+    return datetime.fromtimestamp(timestamp / 1000, tz=timezone.utc)
 
 
 def convert_isostr_to_date(date_str: str) -> datetime:
@@ -204,14 +204,20 @@ def process_time_span(time_span: TimeSpanParameters) -> None:
     if time_span.start_time is None or time_span.end_time is None or not time_span.formatted:
         return
 
+    time_zone = time_span.time_zone or ZoneInfo("UTC")
+    time_span.start_time = time_span.start_time.astimezone(time_zone)
+    time_span.end_time = time_span.end_time.astimezone(time_zone)
+
     if time_span.time_step is None:
         time_span.time_step = get_formatted_time_step(time_span.start_time, time_span.end_time, time_span.time_zone)
 
-    time_span.start_time = align_start_time(time_span.start_time, time_span.time_step).astimezone(time_span.time_zone)
-    time_span.end_time = align_end_time(time_span.end_time, time_span.time_step, time_span.time_zone).astimezone(time_span.time_zone)
+    time_span.start_time = align_start_time(time_span.start_time, time_span.time_step)
+    time_span.end_time = align_end_time(time_span.end_time, time_span.time_step, time_zone)
 
 
-def get_formatted_time_step(start_time: datetime, end_time: datetime, time_zone: Optional[ZoneInfo] = None, inclusive: bool = False) -> FormattedTimeStep:
+def get_formatted_time_step(
+    start_time: datetime, end_time: datetime, time_zone: Optional[ZoneInfo] = None, inclusive: bool = False
+) -> FormattedTimeStep:
     """
     Selects an appropriate time step for a given time span.
 
@@ -228,26 +234,23 @@ def get_formatted_time_step(start_time: datetime, end_time: datetime, time_zone:
         FormattedTimeStep: Selected time step for the duration.
     """
 
-    if calculate_date_delta(start_time, FormattedTimeStep._1Y, time_zone) < end_time or (inclusive and calculate_date_delta(start_time, FormattedTimeStep._1Y, time_zone) <= end_time):
-        return FormattedTimeStep._1Y
-
-    elif calculate_date_delta(start_time, FormattedTimeStep._1M, time_zone) < end_time or (inclusive and calculate_date_delta(start_time, FormattedTimeStep._1M, time_zone) <= end_time):
-        return FormattedTimeStep._1M
-
-    elif calculate_date_delta(start_time, FormattedTimeStep._1d, time_zone) < end_time or (inclusive and calculate_date_delta(start_time, FormattedTimeStep._1d, time_zone) <= end_time):
-        return FormattedTimeStep._1d
-
-    elif calculate_date_delta(start_time, FormattedTimeStep._1h, time_zone) < end_time or (inclusive and calculate_date_delta(start_time, FormattedTimeStep._1h, time_zone) <= end_time):
-        return FormattedTimeStep._1h
-
-    elif calculate_date_delta(start_time, FormattedTimeStep._15m, time_zone) < end_time or (inclusive and calculate_date_delta(start_time, FormattedTimeStep._15m, time_zone) <= end_time):
-        return FormattedTimeStep._15m
-
-    else:
-        return FormattedTimeStep._1m
+    end_timestamp = end_time.timestamp()
+    for step in (
+        FormattedTimeStep._1Y,
+        FormattedTimeStep._1M,
+        FormattedTimeStep._1d,
+        FormattedTimeStep._1h,
+        FormattedTimeStep._15m,
+    ):
+        next_timestamp = calculate_date_delta(start_time, step, time_zone).timestamp()
+        if next_timestamp < end_timestamp or (inclusive and next_timestamp == end_timestamp):
+            return step
+    return FormattedTimeStep._1m
 
 
-def calculate_date_delta(start_time: datetime, formatted_time_step: FormattedTimeStep, time_zone: Optional[ZoneInfo] = None) -> datetime:
+def calculate_date_delta(
+    start_time: datetime, formatted_time_step: FormattedTimeStep, time_zone: Optional[ZoneInfo] = None
+) -> datetime:
     """
     Adds one time step interval to a datetime using calendar-aware arithmetic.
 
@@ -272,14 +275,15 @@ def calculate_date_delta(start_time: datetime, formatted_time_step: FormattedTim
 
     arr_end: Optional[arrow.Arrow] = None
 
+    # Subdaily steps measure elapsed time; calendar steps keep local boundaries.
     if formatted_time_step is FormattedTimeStep._1m:
-        arr_end = arr_start.shift(minutes=1)
+        arr_end = arr_start.to("UTC").shift(minutes=1).to(time_zone or "UTC")
 
     elif formatted_time_step is FormattedTimeStep._15m:
-        arr_end = arr_start.shift(minutes=15)
+        arr_end = arr_start.to("UTC").shift(minutes=15).to(time_zone or "UTC")
 
     elif formatted_time_step is FormattedTimeStep._1h:
-        arr_end = arr_start.shift(hours=1)
+        arr_end = arr_start.to("UTC").shift(hours=1).to(time_zone or "UTC")
 
     elif formatted_time_step is FormattedTimeStep._1d:
         arr_end = arr_start.shift(days=1)
@@ -456,7 +460,9 @@ def align_start_time(start_time: datetime, formatted_time_step: FormattedTimeSte
         raise ValueError(f"Unknown formatted time_step {formatted_time_step}.")
 
 
-def align_end_time(end_time: datetime, formatted_time_step: FormattedTimeStep, time_zone: Optional[ZoneInfo] = None) -> datetime:
+def align_end_time(
+    end_time: datetime, formatted_time_step: FormattedTimeStep, time_zone: Optional[ZoneInfo] = None
+) -> datetime:
     """
     Aligns datetime to the end of the nearest time step boundary.
 
@@ -473,6 +479,9 @@ def align_end_time(end_time: datetime, formatted_time_step: FormattedTimeStep, t
     Raises:
         ValueError: If time step is unknown.
     """
+
+    if time_zone is not None:
+        end_time = end_time.astimezone(time_zone)
 
     if formatted_time_step is FormattedTimeStep._1m:
         if end_time.second == 0 and end_time.microsecond == 0:
@@ -559,9 +568,9 @@ def find_bucket_for_time(time: datetime, aligned_buckets: List[Tuple[datetime, d
         ValueError: If datetime doesn't fall within any bucket.
     """
 
+    timestamp = time.timestamp()
     for bucket_start, bucket_end in aligned_buckets:
-
-        if bucket_start <= time < bucket_end:
+        if bucket_start.timestamp() <= timestamp < bucket_end.timestamp():
             return bucket_start
 
     raise ValueError(f"Didn't find an aligned bucket for time: {time}.")
@@ -589,10 +598,10 @@ def get_aligned_time_buckets(
     time_buckets: List[Tuple[datetime, datetime]] = []
 
     current_st = start_time
-    current_et = calculate_date_delta(current_st, time_step, time_zone)
-    while current_st < end_time:
+    end_timestamp = end_time.timestamp()
+    while current_st.timestamp() < end_timestamp:
+        current_et = calculate_date_delta(current_st, time_step, time_zone)
         time_buckets.append((current_st, current_et))
-        current_st = calculate_date_delta(current_st, time_step, time_zone)
-        current_et = calculate_date_delta(current_et, time_step, time_zone)
+        current_st = current_et
 
     return time_buckets

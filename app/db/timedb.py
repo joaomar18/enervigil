@@ -5,7 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 from influxdb import InfluxDBClient
 from influxdb.resultset import ResultSet
 from typing import List, Dict, Tuple, Any, Optional, Iterable, Iterator
-from datetime import datetime
+from datetime import datetime, timezone
 from dataclasses import dataclass
 from zoneinfo import ZoneInfo
 
@@ -534,23 +534,20 @@ class TimeDBClient:
         existing_data: Dict[datetime, Dict[str, Any]] = {}
 
         for point in points:
-            bucket_start = date.find_bucket_for_time(point["start_time"], aligned_time_buckets)
+            # UTC keys distinguish the two occurrences of an hour when DST ends.
+            bucket_start = date.find_bucket_for_time(point["start_time"], aligned_time_buckets).astimezone(timezone.utc)
             if bucket_start not in existing_data:
                 existing_data[bucket_start] = point
             else:
+                existing_point = existing_data[bucket_start]
                 if not variable.config.is_counter:
-                    existing_data[bucket_start]["average_value"] = (
-                        (existing_data[bucket_start]["mean_sum"] + point["mean_sum"])
-                        / (existing_data[bucket_start]["mean_count"] + point["mean_count"])
-                    ) / unit_factor
-                    existing_data[bucket_start]["min_value"] = min(
-                        existing_data[bucket_start]["min_value"], point["min_value"]
-                    )
-                    existing_data[bucket_start]["max_value"] = max(
-                        existing_data[bucket_start]["max_value"], point["max_value"]
-                    )
+                    existing_point["mean_sum"] += point["mean_sum"]
+                    existing_point["mean_count"] += point["mean_count"]
+                    existing_point["average_value"] = existing_point["mean_sum"] / existing_point["mean_count"] / unit_factor
+                    existing_point["min_value"] = min(existing_point["min_value"], point["min_value"])
+                    existing_point["max_value"] = max(existing_point["max_value"], point["max_value"])
                 else:
-                    existing_data[bucket_start]["value"] += point["value"]
+                    existing_point["value"] += point["value"]
 
         return existing_data
 
@@ -582,8 +579,9 @@ class TimeDBClient:
 
         output: List[Dict[str, Any]] = []
         for bucket_start, bucket_end in aligned_time_buckets:
-            if bucket_start in existing_data:
-                point = existing_data[bucket_start]
+            bucket_key = bucket_start.astimezone(timezone.utc)
+            if bucket_key in existing_data:
+                point = existing_data[bucket_key]
                 point["start_time"] = date.to_iso_minutes(bucket_start)
                 point["end_time"] = date.to_iso_minutes(bucket_end)
             else:
@@ -882,7 +880,11 @@ class TimeDBClient:
             if (time_span.start_time and not time_span.end_time) or (time_span.end_time and not time_span.start_time):
                 raise ValueError("Both 'start_time' and 'end_time' must be provided together.")
 
-            if time_span.start_time and time_span.end_time and time_span.end_time <= time_span.start_time:
+            if (
+                time_span.start_time
+                and time_span.end_time
+                and time_span.end_time.timestamp() <= time_span.start_time.timestamp()
+            ):
                 raise ValueError("'end_time' must be a later date than 'start_time'.")
 
             client.switch_database(db_name)

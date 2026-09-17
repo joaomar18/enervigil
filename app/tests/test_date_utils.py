@@ -35,6 +35,30 @@ def test_timestamp_roundtrip():
     assert ts == int(d.timestamp() * 1000)
     restored = date.get_date_from_timestamp(ts)
     assert restored.timestamp() == pytest.approx(d.timestamp())
+    assert restored == d
+    assert restored.tzinfo == timezone.utc
+
+
+@pytest.mark.parametrize("server_timezone", ["UTC", "Europe/Lisbon", "America/New_York"])
+@pytest.mark.parametrize("month", [1, 7])
+def test_node_update_timestamp_serialization_preserves_instant(monkeypatch, server_timezone, month):
+    local_zone = ZoneInfo(server_timezone)
+
+    class ServerDatetime(datetime):
+        @classmethod
+        def fromtimestamp(cls, timestamp, tz=None):
+            # Simulate a server's local timezone without changing the system clock.
+            result = super().fromtimestamp(timestamp, tz=tz if tz is not None else local_zone)
+            return result if tz is not None else result.replace(tzinfo=None)
+
+    monkeypatch.setattr(date, "datetime", ServerDatetime)
+    updated_at = dt(2026, month, 17, 12, 30, 0, 123000)
+    timestamp = date.get_timestamp(updated_at)
+
+    # Same conversion used by NodeProcessor.create_extended_info().
+    serialized = date.to_iso(date.get_date_from_timestamp(timestamp))
+    assert serialized == updated_at.isoformat()
+    assert datetime.fromisoformat(serialized).timestamp() * 1000 == timestamp
 
 
 def test_convert_isostr_to_date_defaults_to_utc_when_missing_tz():
