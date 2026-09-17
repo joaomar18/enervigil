@@ -7,6 +7,7 @@ import math
 
 #############LOCAL IMPORTS#############
 
+from app.controller.node.processor.numeric_processor import NumericNodeProcessor
 from model.controller.device import EnergyMeterOptions, PowerFactorDirection
 from model.controller.node import CounterMode
 from controller.node.node import Node
@@ -62,6 +63,9 @@ def calculate_energy(prefix: str, energy_type: str, node: Node, meter_nodes: Dic
         node.processor.set_value(scaled_value)
 
     elif node.config.counter_mode is CounterMode.DELTA:
+
+        if not isinstance(node.processor, NumericNodeProcessor):
+            return
 
         (power_node, power_value) = meter_util.get_numeric_node_with_value(f"{prefix}{energy_type}_power", meter_nodes)
 

@@ -8,6 +8,7 @@ import { timeStepFormatters } from "$lib/types/date";
 import { getElegantShortStringFromDate } from "$lib/logic/util/date";
 import type { CounterLogPoint, ProcessedCounterLogPoint } from "$lib/types/nodes/logs";
 import { roundToDecimalPlaces } from "$lib/logic/util/generic";
+import { scaleUnitValue } from "$lib/logic/util/units";
 
 /**
  * Graph object for visualizing counter/cumulative data with step-based bar rendering.
@@ -25,29 +26,28 @@ export class CounterGraphObject extends BaseGraphObject<CounterLogPoint> {
      */
     constructor(container: HTMLElement, hoveredLogPointChange: ((logPoint: CounterLogPoint | null) => void) | null, mousePositionChange: ((xPos: number | undefined, yPos: number | undefined) => void) | null, gridDoubleClick: ((startTime: Date, endTime: Date) => void) | null, points: Array<ProcessedCounterLogPoint> | undefined) {
         super(container, hoveredLogPointChange, mousePositionChange, gridDoubleClick);
-        this.points = !!points ? points : [];
+        this.points = points ? points.map((point) => ({ ...point })) : [];
     }
 
     /**
-     * Updates graph data points with optional decimal rounding while maintaining array reference.
+     * Scales graph points and tooltips to one unit, preserving the source data.
      */
     updatePoints(points: Array<ProcessedCounterLogPoint>, roundPoints: boolean = false, config: {
         decimalPlaces?: number | undefined | null;
+        unit?: string;
+        isDefaultVariable?: boolean;
     } = { decimalPlaces: null }): void {
 
-        if (!roundPoints) {
-            this.points.length = 0;
-            this.points.push(...points);
-        }
-        else {
-            const roundedPoints = points.map(point => ({
-                ...point,
-                value: roundToDecimalPlaces(point.value, config.decimalPlaces || 0)
-            }));
-
-            this.points.length = 0;
-            this.points.push(...roundedPoints);
-        }
+        this.currentHoverPeriod = -1;
+        this.hoveredLogPoint = null;
+        const reference = points.reduce((max, point) => Number.isFinite(point.value) ? Math.max(max, Math.abs(point.value!)) : max, 0);
+        this.unit = scaleUnitValue(reference, config.unit, config.isDefaultVariable ?? false).unit;
+        this.points = points.map(point => ({
+            ...point,
+            value: this.unit !== (config.unit ?? "")
+                ? scaleUnitValue(point.value, config.unit, true, reference).value ?? null
+                : roundPoints ? roundToDecimalPlaces(point.value, config.decimalPlaces ?? 0) : point.value,
+        }));
     }
 
     /**

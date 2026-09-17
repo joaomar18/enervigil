@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { roundToDecimalPlaces } from "$lib/logic/util/generic";
     import Metrics from "../Metrics.svelte";
     import { getMetricsViewVariables } from "$lib/logic/view/nodes";
     import { NodeCategory } from "$lib/types/nodes/base";
@@ -16,15 +15,12 @@
     export let dataFetched: boolean;
     export let firstFetch: boolean;
     export let roundMetrics: boolean = false;
+    export let isDefaultVariable: boolean = false;
 
     // Variables
     let metricsVariables: Record<string, { textKey: string; imageFile: string; value: any }>;
 
     // Reactive Statements
-    $: if (metrics && roundMetrics) {
-        if ("value" in metrics) metrics.value = roundToDecimalPlaces(metrics.value, decimalPlaces || 0);
-    }
-
     $: if (metrics) {
         metricsVariables = getMetricsViewVariables(NodeCategory.Counters, metrics);
     }
@@ -41,4 +37,4 @@
     integration with internationalization and theming. Provides consistent counter data
     presentation for energy meters, usage trackers, and other cumulative measurements.
 -->
-<Metrics {style} {dataFetched} {firstFetch} {metricsVariables} {unit} metricsCategory={NodeCategory.Counters} bind:previousCategory></Metrics>
+<Metrics {style} {dataFetched} {firstFetch} {metricsVariables} {unit} {isDefaultVariable} {decimalPlaces} {roundMetrics} metricsCategory={NodeCategory.Counters} bind:previousCategory></Metrics>

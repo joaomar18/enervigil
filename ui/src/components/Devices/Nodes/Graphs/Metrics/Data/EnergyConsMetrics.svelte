@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { scaleUnitValue } from "$lib/logic/util/units";
+    import { EnergyConsumptionGraphObject } from "$lib/logic/view/graph/energyConsumption";
     import InlineLoader from "../../../../../General/InlineLoader.svelte";
     import { getPowerFactorDirectionString } from "$lib/logic/util/energy";
     import type { EnergyConsumptionMetrics } from "$lib/types/nodes/logs";
@@ -33,7 +35,7 @@
     let forceColStack = false;
     let desktopView = false;
     let colStack = false;
-    let loaderTimeout: number | null = null;
+    let loaderTimeout: ReturnType<typeof setTimeout> | null = null;
     let numberOfVariables: number;
     let containerEl: HTMLDivElement;
     let pfDirectionStr: string = "";
@@ -44,11 +46,16 @@
     $: colStack = forceColStack || colStackWidthReached;
     $: numberOfVariables = 3;
 
-    $: if (metrics && roundMetrics) {
-        if ("active_energy" in metrics) metrics.active_energy = roundToDecimalPlaces(metrics.active_energy, activeEnergyDecimalPlaces || 0);
-        if ("reactive_energy" in metrics) metrics.reactive_energy = roundToDecimalPlaces(metrics.reactive_energy, reactiveEnergyDecimalPlaces || 0);
-        if ("power_factor" in metrics) metrics.power_factor = roundToDecimalPlaces(metrics.power_factor, powerFactorDecimalPlaces || 0);
-    }
+    $: [activeReference, reactiveReference] = EnergyConsumptionGraphObject.getScaleReferences(
+        metrics?.active_energy, metrics?.reactive_energy, activeEnergyUnit, reactiveEnergyUnit,
+    );
+    $: activeEnergy = scaleUnitValue(metrics?.active_energy, activeEnergyUnit, true, activeReference);
+    $: reactiveEnergy = scaleUnitValue(metrics?.reactive_energy, reactiveEnergyUnit, true, reactiveReference);
+    $: activeValue = activeEnergy.unit !== activeEnergyUnit || !roundMetrics
+        ? activeEnergy.value : roundToDecimalPlaces(metrics?.active_energy, activeEnergyDecimalPlaces ?? 0);
+    $: reactiveValue = reactiveEnergy.unit !== reactiveEnergyUnit || !roundMetrics
+        ? reactiveEnergy.value : roundToDecimalPlaces(metrics?.reactive_energy, reactiveEnergyDecimalPlaces ?? 0);
+    $: powerFactor = roundMetrics ? roundToDecimalPlaces(metrics?.power_factor, powerFactorDecimalPlaces ?? 0) : metrics?.power_factor;
 
     $: if (metrics?.power_factor_direction) {
         pfDirectionStr = getPowerFactorDirectionString(metrics?.power_factor_direction);
@@ -65,7 +72,7 @@
     }
     $: if (dataFetched) {
         if (loaderTimeout) {
-            clearInterval(loaderTimeout);
+            clearTimeout(loaderTimeout);
             loaderTimeout = null;
         }
         showLoader = false;
@@ -138,8 +145,8 @@
                     <div class="loader-div">
                         {#if metrics && "active_energy" in metrics}
                             {#if metrics.active_energy !== null}
-                                <span class="value">{metrics.active_energy}</span>
-                                <span class="unit">{activeEnergyUnit}</span>
+                                <span class="value">{activeValue}</span>
+                                <span class="unit">{activeEnergy.unit}</span>
                             {:else}
                                 <span class="no-data-label">{$texts.noDataAvailableShort}</span>
                             {/if}
@@ -158,8 +165,8 @@
                     <div class="loader-div">
                         {#if metrics && "reactive_energy" in metrics}
                             {#if metrics.reactive_energy !== null}
-                                <span class="value">{metrics.reactive_energy}</span>
-                                <span class="unit">{reactiveEnergyUnit}</span>
+                                <span class="value">{reactiveValue}</span>
+                                <span class="unit">{reactiveEnergy.unit}</span>
                             {:else}
                                 <span class="no-data-label">{$texts.noDataAvailableShort}</span>
                             {/if}
@@ -178,7 +185,7 @@
                     <div class="loader-div">
                         {#if metrics && "power_factor" in metrics && "power_factor_direction" in metrics}
                             {#if metrics.power_factor !== null}
-                                <span class="value">{metrics.power_factor}{pfDirectionStr}</span>
+                                <span class="value">{powerFactor}{pfDirectionStr}</span>
                             {:else if metrics.active_energy == 0 && metrics.reactive_energy == 0}
                                 <span class="no-data-label">{$texts.invalid}</span>
                             {:else}

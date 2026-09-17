@@ -1,5 +1,6 @@
 <script lang="ts">
     import { roundToDecimalPlaces } from "$lib/logic/util/generic";
+    import { scaleUnitValue } from "$lib/logic/util/units";
     import BaseDisplay from "./BaseDisplay.svelte";
     import Bar from "../../../General/Bar.svelte";
 
@@ -19,6 +20,7 @@
     export let maxWarningState: boolean | undefined = undefined;
     export let value: number | null;
     export let unitText: string;
+    export let isDefaultVariable: boolean = false;
     export let decimalPlaces: number | undefined;
     export let minClickTimeMs: number | undefined = undefined; // Filter time for the button click
 
@@ -65,6 +67,8 @@
 
     // Reactive Statements
     $: valueDisconnected = value === null;
+    $: scaledValue = scaleUnitValue(value, unitText, isDefaultVariable);
+    $: displayValue = scaledValue.unit !== unitText ? scaledValue.value : roundToDecimalPlaces(value, decimalPlaces || 0);
 
     // Click Export Function
     export let onClick: (() => void) | null = null;
@@ -110,11 +114,11 @@
     >
         <div class="value-div">
             {#if !valueDisconnected}
-                <span class="value">{roundToDecimalPlaces(value, decimalPlaces || 0)}</span>
+                <span class="value">{displayValue}</span>
             {/if}
         </div>
 
-        <span class="unit">{unitText}</span>
+        <span class="unit">{scaledValue.unit}</span>
 
         {#if (minRangeValue !== undefined || maxRangeValue !== undefined) && value !== null}
             <div class="bar-value-div">

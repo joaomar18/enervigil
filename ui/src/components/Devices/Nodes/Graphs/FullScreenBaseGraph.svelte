@@ -23,6 +23,7 @@
     export let globalMetrics: BaseMetrics | undefined;
     export let previousGraphCategory: NodeCategory | undefined;
     export let unit: string = "";
+    export let isDefaultVariable: boolean = false;
     export let decimalPlaces: number | null = null;
     export let selectedTimeSpan: LogSpanPeriod;
 
@@ -60,6 +61,7 @@
         {firstFetch}
         {globalMetrics}
         {unit}
+        {isDefaultVariable}
         {decimalPlaces}
         bind:selectedTimeSpan
         bind:previousGraphCategory

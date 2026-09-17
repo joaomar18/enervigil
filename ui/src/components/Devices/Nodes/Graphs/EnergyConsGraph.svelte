@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { onDestroy } from "svelte";
     import { EnergyConsumptionGraphObject } from "$lib/logic/view/graph/energyConsumption";
     import { BaseGraphObject } from "$lib/logic/view/graph/base";
     import { FormattedTimeStep } from "$lib/types/date";
@@ -60,6 +61,9 @@
     let graphContainer: HTMLDivElement;
     let gridElement: HTMLDivElement | null = null;
     let graph: EnergyConsumptionGraphObject | null = null;
+    let graphCreationFrame: number | null = null;
+    let graphActiveEnergyUnit = "";
+    let graphReactiveEnergyUnit = "";
     let graphCreated: boolean = false;
     let activeEnergyNoData: boolean = true;
     let reactiveEnergyNoData: boolean = true;
@@ -69,15 +73,21 @@
 
     // Reactive Statements
     $: if (graphContainer) {
-        requestAnimationFrame(() => {
-            createGraphObject();
-        });
+        createGraphObject();
     }
 
-    $: if (checkLogsAreDifferent(data, currentData)) currentData = data;
+    $: if (data === undefined || checkLogsAreDifferent(data, currentData)) currentData = data;
 
-    $: if (graph && currentData && timeStep && $selectedLang) {
-        updateGraphData();
+    $: graphConfig = {
+        activeEnergyUnit,
+        reactiveEnergyUnit,
+        activeEnergyDecimalPlaces,
+        reactiveEnergyDecimalPlaces,
+        powerFactorDecimalPlaces,
+    };
+
+    $: if (graph && timeStep && $selectedLang && selectedTimeSpan) {
+        updateGraphData(currentData ?? [], timeStep, selectedTimeSpan, graphConfig);
     }
 
     // Functions
@@ -96,7 +106,9 @@
 
     function createGraphObject(): void {
         if (graph) graph.destroy();
-        requestAnimationFrame(() => {
+        if (graphCreationFrame !== null) cancelAnimationFrame(graphCreationFrame);
+        graphCreationFrame = requestAnimationFrame(() => {
+            graphCreationFrame = null;
             mergedStyle = effectiveStyle;
             graph = new EnergyConsumptionGraphObject(
                 graphContainer,
@@ -109,17 +121,26 @@
         });
     }
 
-    function updateGraphData(): void {
-        if (graph && currentData && timeStep) {
+    function updateGraphData(points: ProcessedEnergyConsumptionLogPoint[], step: FormattedTimeStep, span: LogSpanPeriod, config: typeof graphConfig): void {
+        if (graph) {
+            insideGraph = false;
+            logPoint = null;
             graph.destroy();
-            graph.updatePoints(currentData, true, { activeEnergyDecimalPlaces, reactiveEnergyDecimalPlaces, powerFactorDecimalPlaces });
-            graph.createGraph(timeStep, selectedTimeSpan, mergedStyle);
+            graph.updatePoints(points, true, config);
+            graphActiveEnergyUnit = graph.activeEnergyUnit;
+            graphReactiveEnergyUnit = graph.reactiveEnergyUnit;
+            graph.createGraph(step, span, mergedStyle);
             gridElement = graph.getGridElement();
             graphCreated = true;
             activeEnergyNoData = !graph.hasActiveEnergyData();
             reactiveEnergyNoData = !graph.hasReactiveEnergyData();
         }
     }
+
+    onDestroy(() => {
+        if (graphCreationFrame !== null) cancelAnimationFrame(graphCreationFrame);
+        graph?.destroy();
+    });
 
     // Export Functions
     export let changePhase: (selectedPhase: SelectablePhaseFilter) => void;
@@ -214,13 +235,13 @@
                     {#if graphCreated && (!activeEnergyNoData || !reactiveEnergyNoData)}
                         <span class="unit-label">
                             {#if !activeEnergyNoData}
-                                {activeEnergyUnit}
+                                {graphActiveEnergyUnit}
                             {/if}
                             {#if !activeEnergyNoData && !reactiveEnergyNoData}
                                 {" | "}
                             {/if}
                             {#if !reactiveEnergyNoData}
-                                {reactiveEnergyUnit}
+                                {graphReactiveEnergyUnit}
                             {/if}
                         </span>
                     {/if}
@@ -237,7 +258,7 @@
             </div>
             {#if gridElement}
                 <GraphToolTip zIndex={103} {gridElement} {insideGraph} {cursorPos}>
-                    <EnergyConsToolTip {logPoint} {activeEnergyUnit} {reactiveEnergyUnit} />
+                    <EnergyConsToolTip {logPoint} activeEnergyUnit={graphActiveEnergyUnit} reactiveEnergyUnit={graphReactiveEnergyUnit} />
                 </GraphToolTip>
             {/if}
         </div>

@@ -1,13 +1,14 @@
 <script lang="ts">
     import { getDeviceID } from "$lib/logic/view/navigation";
     import { roundToDecimalPlaces } from "$lib/logic/util/generic";
+    import { scaleUnitValue } from "$lib/logic/util/units";
     import RightPanelSheet from "../../General/RightPanelSheet.svelte";
     import InlineLoader from "../../General/InlineLoader.svelte";
     import BaseGraph from "./Graphs/BaseGraph.svelte";
     import ElapsedDateTime from "../../General/TimeDate/ElapsedDateTime.svelte";
     import TimePeriodPicker from "../../General/Pickers/TimePeriodPicker.svelte";
     import { LogSpanPeriod } from "$lib/types/view/nodes";
-    import { getNodePhaseSection } from "$lib/logic/util/nodes";
+    import { getNodePhaseSection, isDefault } from "$lib/logic/util/nodes";
     import { getNodeExtendedInfoAPI, getNodeLogsAPI } from "$lib/logic/api/nodes";
     import { getTimeSpanFromLogPeriod } from "$lib/logic/util/date";
     import { SlidingWindow } from "$lib/logic/util/classes/SlidingWindow";
@@ -195,6 +196,12 @@
     }
 
     // Functions
+    function formatLimit(value: number | undefined, node: ProcessedNodeState): string {
+        const scaled = scaleUnitValue(value, node.unit, isDefault(node));
+        const displayValue = scaled.unit !== node.unit ? scaled.value : roundToDecimalPlaces(value, node.decimal_places || 0);
+        return displayValue == null ? "" : `${displayValue} ${scaled.unit}`;
+    }
+
     async function loadNodeAdditionalInfo() {
         let deviceId = getDeviceID();
         if (!deviceId || !nodeState) {
@@ -387,6 +394,7 @@
                                 maxWarningState={nodeState.max_warning_state}
                                 value={nodeState.value}
                                 unitText={nodeState.unit}
+                                isDefaultVariable={isDefault(nodeState)}
                                 decimalPlaces={nodeState.decimal_places}
                             />
                         </span>
@@ -395,7 +403,9 @@
                         <span class="label">{$texts.updated}</span>
                         <InlineLoader loaded={!nodeExtendedInfoLoading}>
                             {#if nodeExtendedInfo}
-                                <span class="value align-right"><ElapsedDateTime dateFetched={nodeExtendedInfoFetched} isoDateString={nodeExtendedInfo.last_update_date} /></span>
+                                <span class="value align-right"
+                                    ><ElapsedDateTime dateFetched={nodeExtendedInfoFetched} isoDateString={nodeExtendedInfo.last_update_date} /></span
+                                >
                             {/if}
                         </InlineLoader>
                     </div>
@@ -403,7 +413,9 @@
                         <dt class="label">{$texts.restarted}</dt>
                         <InlineLoader loaded={!nodeExtendedInfoLoading}>
                             {#if nodeExtendedInfo}
-                                <span class="value align-right"><ElapsedDateTime dateFetched={nodeExtendedInfoFetched} isoDateString={nodeExtendedInfo.last_reset_date} /></span>
+                                <span class="value align-right"
+                                    ><ElapsedDateTime dateFetched={nodeExtendedInfoFetched} isoDateString={nodeExtendedInfo.last_reset_date} /></span
+                                >
                             {/if}
                         </InlineLoader>
                     </div>
@@ -417,10 +429,7 @@
                                 <span class="label">{$texts.lowerLimit}</span>
                                 <InlineLoader loaded={!nodeExtendedInfoLoading && nodeExtendedInfo?.min_alarm_value !== undefined}>
                                     <span class="value with-adornment align-right">
-                                        <span class="value"
-                                            >{roundToDecimalPlaces(nodeExtendedInfo?.min_alarm_value, nodeState.decimal_places || 0)}
-                                            {nodeState.unit}</span
-                                        >
+                                        <span class="value">{formatLimit(nodeExtendedInfo?.min_alarm_value, nodeState)}</span>
                                         <div class="dot-state-div">
                                             <div class="dot-state" data-state={nodeState.min_alarm_state ? "alarmState" : "dim"}></div>
                                         </div>
@@ -433,10 +442,7 @@
                                 <span class="label">{$texts.upperLimit}</span>
                                 <InlineLoader loaded={!nodeExtendedInfoLoading && nodeExtendedInfo?.max_alarm_value !== undefined}>
                                     <span class="value with-adornment align-right">
-                                        <span class="value"
-                                            >{roundToDecimalPlaces(nodeExtendedInfo?.max_alarm_value, nodeState.decimal_places || 0)}
-                                            {nodeState.unit}</span
-                                        >
+                                        <span class="value">{formatLimit(nodeExtendedInfo?.max_alarm_value, nodeState)}</span>
                                         <div class="dot-state-div">
                                             <div class="dot-state" data-state={nodeState.max_alarm_state ? "alarmState" : "dim"}></div>
                                         </div>
@@ -455,10 +461,7 @@
                                 <span class="label">{$texts.lowerLimit}</span>
                                 <InlineLoader loaded={!nodeExtendedInfoLoading && nodeExtendedInfo?.min_warning_value !== undefined}>
                                     <span class="value with-adornment align-right">
-                                        <span class="value"
-                                            >{roundToDecimalPlaces(nodeExtendedInfo?.min_warning_value, nodeState.decimal_places || 0)}
-                                            {nodeState.unit}</span
-                                        >
+                                        <span class="value">{formatLimit(nodeExtendedInfo?.min_warning_value, nodeState)}</span>
                                         <div class="dot-state-div">
                                             <div class="dot-state" data-state={nodeState.min_warning_state ? "warningState" : "dim"}></div>
                                         </div>
@@ -471,10 +474,7 @@
                                 <span class="label">{$texts.upperLimit}</span>
                                 <InlineLoader loaded={!nodeExtendedInfoLoading && nodeExtendedInfo?.max_warning_value !== undefined}>
                                     <span class="value with-adornment align-right">
-                                        <span class="value"
-                                            >{roundToDecimalPlaces(nodeExtendedInfo?.max_warning_value, nodeState.decimal_places || 0)}
-                                            {nodeState.unit}</span
-                                        >
+                                        <span class="value">{formatLimit(nodeExtendedInfo?.max_warning_value, nodeState)}</span>
                                         <div class="dot-state-div">
                                             <div class="dot-state" data-state={nodeState.max_warning_state ? "warningState" : "dim"}></div>
                                         </div>
@@ -507,6 +507,7 @@
                                 firstFetch={nodeLogsFirstFetch}
                                 globalMetrics={nodeLogs?.global_metrics}
                                 unit={nodeLogs?.unit ?? ""}
+                                isDefaultVariable={isDefault(nodeState)}
                                 decimalPlaces={nodeLogs?.decimal_places}
                                 {initialDate}
                                 {endDate}

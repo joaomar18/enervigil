@@ -1,6 +1,7 @@
 <script lang="ts">
     import { NodePhase } from "$lib/types/nodes/base";
     import { NodeCategory } from "$lib/types/nodes/base";
+    import { isDefault } from "$lib/logic/util/nodes";
     import Action from "../General/Action.svelte";
     import ContentCard from "../General/ContentCard.svelte";
     import ToolTipText from "../General/ToolTipText.svelte";
@@ -141,6 +142,7 @@
                                 maxWarningState={nodeState.max_warning_state}
                                 value={nodeState.value}
                                 unitText={nodeState.unit}
+                                isDefaultVariable={isDefault(nodeState)}
                                 decimalPlaces={nodeState.decimal_places}
                                 onClick={() => openDetailDiv(nodeState)}
                                 minClickTimeMs={500}

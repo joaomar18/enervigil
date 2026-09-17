@@ -49,6 +49,7 @@
     export let globalMetrics: BaseMetrics | undefined;
     export let previousGraphCategory: NodeCategory | undefined = undefined;
     export let unit: string = "";
+    export let isDefaultVariable: boolean = false;
     export let decimalPlaces: number | null = null;
     export let useExternalGraph: boolean = false;
     export let useHeader: boolean = true;
@@ -135,6 +136,7 @@
     let showDateRange: boolean = false;
     let loaderTimeout: ReturnType<typeof setTimeout> | null = null;
     let showLoader: boolean = false;
+    let graphUnit = "";
     let graphCreated: boolean = false;
     let graphNoData: boolean = true;
     let resizeObserver: ResizeObserver | null = null;
@@ -172,10 +174,12 @@
         createGraphObject();
     }
 
-    $: if (checkLogsAreDifferent(data, currentData)) currentData = data;
+    $: if (data === undefined || checkLogsAreDifferent(data, currentData)) currentData = data;
 
-    $: if (!useExternalGraph && graph && currentData && timeStep && $selectedLang) {
-        updateGraphData();
+    $: graphConfig = { unit, decimalPlaces, isDefaultVariable };
+
+    $: if (!useExternalGraph && graph && timeStep && $selectedLang && selectedTimeSpan) {
+        updateGraphData(currentData ?? [], timeStep, selectedTimeSpan, graphConfig);
     }
 
     $: if (
@@ -235,11 +239,14 @@
         });
     }
 
-    function updateGraphData(): void {
-        if (graph && currentData && timeStep) {
+    function updateGraphData(points: ProcessedBaseLogPoint[], step: FormattedTimeStep, span: LogSpanPeriod, config: typeof graphConfig): void {
+        if (graph) {
+            insideGraph = false;
+            logPoint = null;
             graph.destroy();
-            graph.updatePoints(currentData, true, { decimalPlaces });
-            graph.createGraph(timeStep, selectedTimeSpan, mergedStyle);
+            graph.updatePoints(points, true, config);
+            graphUnit = graph.unit;
+            graph.createGraph(step, span, mergedStyle);
             gridElement = graph.getGridElement();
             graphCreated = true;
             graphNoData = !graph.hasData();
@@ -344,6 +351,7 @@
                         {firstFetch}
                         {globalMetrics}
                         {unit}
+                        {isDefaultVariable}
                         {decimalPlaces}
                         bind:initialDate
                         bind:endDate
@@ -434,7 +442,7 @@
                                 style={effectiveMetricStyle}
                                 metrics={globalMetrics}
                                 bind:previousCategory={previousGraphCategory}
-                                {unit}
+                                {unit} {isDefaultVariable}
                                 {decimalPlaces}
                                 {dataFetched}
                                 {firstFetch}
@@ -456,7 +464,7 @@
                             <div class="unit-content">
                                 <div class="unit-wrapper">
                                     {#if graphCreated && !graphNoData}
-                                        <span class="unit-label">{unit}</span>
+                                        <span class="unit-label">{graphUnit}</span>
                                     {/if}
                                 </div>
                             </div>
@@ -471,7 +479,7 @@
                             </div>
                             {#if graphType && gridElement}
                                 <GraphToolTip {gridElement} {insideGraph} {cursorPos}>
-                                    <svelte:component this={getGraphToolTipDisplayComponent(graphType)} {unit} {logPoint} />
+                                    <svelte:component this={getGraphToolTipDisplayComponent(graphType)} unit={graphUnit} {logPoint} />
                                 </GraphToolTip>
                             {/if}
                         </div>

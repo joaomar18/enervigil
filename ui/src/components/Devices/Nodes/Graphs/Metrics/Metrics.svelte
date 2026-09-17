@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { scaleUnitValue } from "$lib/logic/util/units";
+    import { roundToDecimalPlaces } from "$lib/logic/util/generic";
     import InlineLoader from "../../../../General/InlineLoader.svelte";
     import type { NodeCategory } from "$lib/types/nodes/base";
 
@@ -17,6 +19,9 @@
     // Props
     export let metricsVariables: Record<string, { textKey: string; imageFile: string; value: any }>;
     export let unit: string = "";
+    export let isDefaultVariable: boolean = false;
+    export let decimalPlaces: number | null = null;
+    export let roundMetrics: boolean = false;
     export let dataFetched: boolean;
     export let firstFetch: boolean;
     export let metricsCategory: NodeCategory;
@@ -72,7 +77,7 @@
     let colStackWidthReached = false;
     let forceColStack = false;
     let colStack = false;
-    let loaderTimeout: number | null = null;
+    let loaderTimeout: ReturnType<typeof setTimeout> | null = null;
     let numberOfVariables: number;
     let containerEl: HTMLDivElement;
 
@@ -91,7 +96,7 @@
     }
     $: if (dataFetched) {
         if (loaderTimeout) {
-            clearInterval(loaderTimeout);
+            clearTimeout(loaderTimeout);
             loaderTimeout = null;
         }
         showLoader = false;
@@ -164,8 +169,9 @@
                         <div class="loader-div">
                             {#if key in metricsVariables}
                                 {#if metricVar.value !== null}
-                                    <span class="value">{metricVar.value}</span>
-                                    <span class="unit">{unit}</span>
+                                    {@const scaled = scaleUnitValue(metricVar.value, unit, isDefaultVariable)}
+                                    <span class="value">{scaled.unit !== unit ? scaled.value : roundMetrics ? roundToDecimalPlaces(metricVar.value, decimalPlaces ?? 0) : metricVar.value}</span>
+                                    <span class="unit">{scaled.unit}</span>
                                 {:else}
                                     <span class="no-data-label">{$texts.noDataAvailableShort}</span>
                                 {/if}

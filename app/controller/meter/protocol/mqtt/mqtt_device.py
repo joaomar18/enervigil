@@ -290,6 +290,7 @@ class MQTTEnergyMeter(EnergyMeter):
             logger.warning(f"Failed to decode MQTT payload on topic {topic} for device {self.name}: {e}")
             for node in nodes:
                 node.set_connection_state(False)
+                node.processor.set_value(None)
             return
 
         decoded_json: Any = None
@@ -324,6 +325,7 @@ class MQTTEnergyMeter(EnergyMeter):
                     f"Failed to process message on topic {topic} for node {node.config.name} on device {self.name}: {e}"
                 )
                 node.set_connection_state(False)
+                node.processor.set_value(None)
 
         if any_node_updated:
             self.update_device_connection_state()
@@ -415,6 +417,7 @@ class MQTTEnergyMeter(EnergyMeter):
             elapsed = (now - node.last_message_time).total_seconds()
             if elapsed > self.communication_options.stale_after:
                 node.set_connection_state(False)
+                node.processor.set_value(None)
 
     async def staleness_monitor(self) -> None:
         """

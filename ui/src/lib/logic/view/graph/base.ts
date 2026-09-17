@@ -33,6 +33,7 @@ export abstract class BaseGraphObject<T extends BaseLogPoint> {
     protected abstract graphType: GraphType;
     protected currentHoverPeriod: number = -1;
     public hoveredLogPoint: T | null = null;
+    public unit: string = "";
     protected container: HTMLElement;
     protected graph: uPlot | null = null;
     protected gridElement: HTMLDivElement | null = null;
@@ -58,7 +59,11 @@ export abstract class BaseGraphObject<T extends BaseLogPoint> {
 
     abstract updatePoints(points: Array<ProcessedBaseLogPoint>, roundPoints: boolean, config: {
         decimalPlaces?: number | undefined | null;
+        unit?: string;
+        isDefaultVariable?: boolean;
         // Energy consumption specific
+        activeEnergyUnit?: string;
+        reactiveEnergyUnit?: string;
         activeEnergyDecimalPlaces?: number | undefined | null;
         reactiveEnergyDecimalPlaces?: number | undefined | null;
         powerFactorDecimalPlaces?: number | undefined | null;

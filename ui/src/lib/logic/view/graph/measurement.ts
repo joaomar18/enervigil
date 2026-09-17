@@ -8,6 +8,7 @@ import { timeStepFormatters } from "$lib/types/date";
 import { getElegantShortStringFromDate } from "$lib/logic/util/date";
 import type { MeasurementLogPoint, ProcessedMeasurementLogPoint } from "$lib/types/nodes/logs";
 import { roundToDecimalPlaces } from "$lib/logic/util/generic";
+import { scaleUnitValue } from "$lib/logic/util/units";
 
 /**
  * Graph object for visualizing measurement data with min/max bands and average lines.
@@ -26,29 +27,32 @@ export class MeasurementGraphObject extends BaseGraphObject<MeasurementLogPoint>
      */
     constructor(container: HTMLElement, hoveredLogPointChange: ((logPoint: MeasurementLogPoint | null) => void) | null, mousePositionChange: ((xPos: number | undefined, yPos: number | undefined) => void) | null, gridDoubleClick: ((startTime: Date, endTime: Date) => void) | null, points: Array<ProcessedMeasurementLogPoint> | undefined) {
         super(container, hoveredLogPointChange, mousePositionChange, gridDoubleClick);
-        this.points = !!points ? points : [];
+        this.points = points ? points.map((point) => ({ ...point })) : [];
     }
 
     /**
-     * Updates graph data points with optional decimal rounding while maintaining array reference.
+     * Scales the average and min/max bands to one unit, preserving the source data.
      */
     updatePoints(points: Array<ProcessedMeasurementLogPoint>, roundPoints: boolean = false, config: {
         decimalPlaces?: number | undefined | null;
+        unit?: string;
+        isDefaultVariable?: boolean;
     } = { decimalPlaces: null }): void {
-        if (!roundPoints) {
-            this.points.length = 0;
-            this.points.push(...points);
-        }
-        else {
-            const roundedPoints = points.map(point => ({
-                ...point,
-                average_value: roundToDecimalPlaces(point.average_value, config.decimalPlaces || 0),
-                min_value: roundToDecimalPlaces(point.min_value, config.decimalPlaces || 0),
-                max_value: roundToDecimalPlaces(point.max_value, config.decimalPlaces || 0),
-            }));
-            this.points.length = 0;
-            this.points.push(...roundedPoints);
-        }
+        this.currentHoverPeriod = -1;
+        this.hoveredLogPoint = null;
+        const reference = points
+            .flatMap(point => [point.min_value, point.max_value, point.average_value])
+            .reduce<number>((max, value) => value != null && Number.isFinite(value) ? Math.max(max, Math.abs(value)) : max, 0);
+        this.unit = scaleUnitValue(reference, config.unit, config.isDefaultVariable ?? false).unit;
+        const formatValue = (value: number | null) => this.unit !== (config.unit ?? "")
+            ? scaleUnitValue(value, config.unit, true, reference).value ?? null
+            : roundPoints ? roundToDecimalPlaces(value, config.decimalPlaces ?? 0) : value;
+        this.points = points.map(point => ({
+            ...point,
+            average_value: formatValue(point.average_value),
+            min_value: formatValue(point.min_value),
+            max_value: formatValue(point.max_value),
+        }));
     }
 
     /**

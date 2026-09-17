@@ -208,7 +208,9 @@ class NumericNodeProcessor(NodeProcessor[N]):
 
         output = additional_data.copy()
         if self.value is not None:
-            output["value"] = round(self.value, self.config.decimal_places) if self.config.decimal_places is not None else int(self.value)
+            output["value"] = (
+                round(self.value, self.config.decimal_places) if self.config.decimal_places is not None else int(self.value)
+            )
         else:
             output["value"] = self.value
 
@@ -217,7 +219,7 @@ class NumericNodeProcessor(NodeProcessor[N]):
 
         if self.config.min_alarm:
             output["min_value_range"] = self.config.min_alarm_value
-        
+
         if self.config.max_alarm:
             output["max_value_range"] = self.config.max_alarm_value
 
@@ -245,7 +247,12 @@ class NumericNodeProcessor(NodeProcessor[N]):
         output = additional_data.copy()
 
         if self.config.is_counter:
-            output["value"] = calculation.get_scaled_value(self.value, self.config.unit) if self.value is not None else None
+            if self.initial_value is None:
+                output["value"] = None
+            else:
+                output["value"] = (
+                    calculation.get_scaled_value(self.value, self.config.unit) if self.value is not None else None
+                )
 
         else:
             output["mean_sum"] = calculation.get_scaled_value(self.mean_sum, self.config.unit)
@@ -253,7 +260,9 @@ class NumericNodeProcessor(NodeProcessor[N]):
 
             if self.min_value is not None:
                 min_value = (
-                    round(self.min_value, self.config.decimal_places) if self.config.decimal_places is not None else int(self.min_value)
+                    round(self.min_value, self.config.decimal_places)
+                    if self.config.decimal_places is not None
+                    else int(self.min_value)
                 )
                 output["min_value"] = calculation.get_scaled_value(min_value, self.config.unit)
             else:
@@ -261,7 +270,9 @@ class NumericNodeProcessor(NodeProcessor[N]):
 
             if self.max_value is not None:
                 max_value = (
-                    round(self.max_value, self.config.decimal_places) if self.config.decimal_places is not None else int(self.max_value)
+                    round(self.max_value, self.config.decimal_places)
+                    if self.config.decimal_places is not None
+                    else int(self.max_value)
                 )
                 output["max_value"] = calculation.get_scaled_value(max_value, self.config.unit)
             else:

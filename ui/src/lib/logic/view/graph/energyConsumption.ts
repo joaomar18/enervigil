@@ -8,6 +8,7 @@ import { timeStepFormatters } from "$lib/types/date";
 import { getElegantShortStringFromDate } from "$lib/logic/util/date";
 import type { EnergyConsumptionLogPoint, ProcessedEnergyConsumptionLogPoint } from "$lib/types/nodes/logs";
 import { roundToDecimalPlaces } from "$lib/logic/util/generic";
+import { getUnitPrefixIndex, scaleUnitValue } from "$lib/logic/util/units";
 
 /**
  * Energy consumption graph visualization with side-by-side active and reactive energy bars.
@@ -30,6 +31,8 @@ import { roundToDecimalPlaces } from "$lib/logic/util/generic";
  * visual comparison of energy consumption patterns.
  */
 export class EnergyConsumptionGraphObject extends BaseGraphObject<EnergyConsumptionLogPoint> {
+    public activeEnergyUnit: string = "";
+    public reactiveEnergyUnit: string = "";
     protected noActiveEnergyData: boolean = true;
     protected noReactiveEnergyData: boolean = true;
     protected graphType = GraphType.EnergyConsumption;
@@ -46,7 +49,7 @@ export class EnergyConsumptionGraphObject extends BaseGraphObject<EnergyConsumpt
         points: Array<ProcessedEnergyConsumptionLogPoint> | undefined
     ) {
         super(container, hoveredLogPointChange, mousePositionChange, gridDoubleClick);
-        this.points = !!points ? points : [];
+        this.points = points ? points.map((point) => ({ ...point })) : [];
     }
 
     /** Returns true if the graph contains valid active energy data points. */
@@ -59,32 +62,52 @@ export class EnergyConsumptionGraphObject extends BaseGraphObject<EnergyConsumpt
         return !this.noReactiveEnergyData;
     }
 
-    /**
-     * Updates graph data points with optional decimal rounding while maintaining array reference.
-     */
+    /** Keeps active and reactive energy on the same prefix when both are present. */
+    static getScaleReferences(active: number | null | undefined, reactive: number | null | undefined, activeUnit: string, reactiveUnit: string): number[] {
+        const values = [active, reactive];
+        const units = [activeUnit, reactiveUnit];
+        const prefixes = units.map((unit, index) => values[index] != null && Number.isFinite(values[index]) && unit
+            ? getUnitPrefixIndex(scaleUnitValue(values[index], unit, true).unit)
+            : -1);
+        const sharedPrefix = Math.max(...prefixes);
+        return units.map((unit, index) => prefixes[index] === -1 ? 0 : 1000 ** (sharedPrefix - getUnitPrefixIndex(unit)));
+    }
+
+    /** Scales both energy series to a shared prefix, preserving the source data. */
     updatePoints(
         points: Array<ProcessedEnergyConsumptionLogPoint>,
         roundPoints: boolean = false,
         config: {
+            activeEnergyUnit?: string;
+            reactiveEnergyUnit?: string;
             activeEnergyDecimalPlaces?: number | undefined | null;
             reactiveEnergyDecimalPlaces?: number | undefined | null;
             powerFactorDecimalPlaces?: number | undefined | null;
         } = { activeEnergyDecimalPlaces: null, reactiveEnergyDecimalPlaces: null, powerFactorDecimalPlaces: null }
     ): void {
-        if (!roundPoints) {
-            this.points.length = 0;
-            this.points.push(...points);
-        } else {
-            const roundedPoints = points.map((point) => ({
-                ...point,
-                active_energy: roundToDecimalPlaces(point.active_energy, config.activeEnergyDecimalPlaces || 0),
-                reactive_energy: roundToDecimalPlaces(point.reactive_energy, config.reactiveEnergyDecimalPlaces || 0),
-                power_factor: roundToDecimalPlaces(point.power_factor, config.powerFactorDecimalPlaces || 0),
-                power_factor_direction: point.power_factor_direction,
-            }));
-            this.points.length = 0;
-            this.points.push(...roundedPoints);
+        this.currentHoverPeriod = -1;
+        this.hoveredLogPoint = null;
+        let activeMax: number | null = null;
+        let reactiveMax: number | null = null;
+        for (const point of points) {
+            if (point.active_energy != null && Number.isFinite(point.active_energy)) activeMax = Math.max(activeMax ?? 0, Math.abs(point.active_energy));
+            if (point.reactive_energy != null && Number.isFinite(point.reactive_energy)) reactiveMax = Math.max(reactiveMax ?? 0, Math.abs(point.reactive_energy));
         }
+        const activeUnit = config.activeEnergyUnit ?? "";
+        const reactiveUnit = config.reactiveEnergyUnit ?? "";
+        const [activeReference, reactiveReference] = EnergyConsumptionGraphObject.getScaleReferences(activeMax, reactiveMax, activeUnit, reactiveUnit);
+        this.activeEnergyUnit = scaleUnitValue(0, activeUnit, true, activeReference).unit;
+        this.reactiveEnergyUnit = scaleUnitValue(0, reactiveUnit, true, reactiveReference).unit;
+        this.points = points.map(point => ({
+            ...point,
+            active_energy: this.activeEnergyUnit !== activeUnit
+                ? scaleUnitValue(point.active_energy, activeUnit, true, activeReference).value ?? null
+                : roundPoints ? roundToDecimalPlaces(point.active_energy, config.activeEnergyDecimalPlaces ?? 0) : point.active_energy,
+            reactive_energy: this.reactiveEnergyUnit !== reactiveUnit
+                ? scaleUnitValue(point.reactive_energy, reactiveUnit, true, reactiveReference).value ?? null
+                : roundPoints ? roundToDecimalPlaces(point.reactive_energy, config.reactiveEnergyDecimalPlaces ?? 0) : point.reactive_energy,
+            power_factor: roundPoints ? roundToDecimalPlaces(point.power_factor, config.powerFactorDecimalPlaces ?? 0) : point.power_factor,
+        }));
     }
 
     /**

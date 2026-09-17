@@ -2,6 +2,7 @@
     import { onDestroy, onMount } from "svelte";
     import { slide } from "svelte/transition";
     import { getElegantStringFromDate } from "$lib/logic/util/date";
+    import { scaleUnitValue } from "$lib/logic/util/units";
     import InlineLoader from "../../../General/InlineLoader.svelte";
     import type { DatePeriodString } from "$lib/types/date";
     import type { MeasurementMetrics } from "$lib/types/nodes/logs";
@@ -116,7 +117,7 @@
     let showDateCheckerActivePower: boolean = false;
     let showDateCheckerReactivePower: boolean = false;
     let showDateCheckerApparentPower: boolean = false;
-    let loaderTimeout: number | null = null;
+    let loaderTimeout: ReturnType<typeof setTimeout> | null = null;
     let activePowerDiv: HTMLDivElement;
     let reactivePowerDiv: HTMLDivElement;
     let apparentPowerDiv: HTMLDivElement;
@@ -145,7 +146,7 @@
     }
     $: if (dataFetched) {
         if (loaderTimeout) {
-            clearInterval(loaderTimeout);
+            clearTimeout(loaderTimeout);
             loaderTimeout = null;
         }
         showLoader = false;
@@ -160,6 +161,30 @@
     $: activePowerDp = metrics?.active_power.decimal_places ?? null;
     $: reactivePowerDp = metrics?.reactive_power.decimal_places ?? null;
     $: apparentPowerDp = metrics?.apparent_power.decimal_places ?? null;
+
+    // Peak power metrics always describe default electrical variables.
+    $: scaledActivePower = scaleUnitValue(activePowerMetrics?.max_value, activePowerUnit, true);
+    $: scaledReactivePower = scaleUnitValue(reactivePowerMetrics?.max_value, reactivePowerUnit, true);
+    $: scaledApparentPower = scaleUnitValue(apparentPowerMetrics?.max_value, apparentPowerUnit, true);
+    $: activePowerValue =
+        scaledActivePower.unit !== activePowerUnit
+            ? scaledActivePower.value
+            : activePowerDp
+              ? activePowerMetrics?.max_value?.toFixed(activePowerDp)
+              : activePowerMetrics?.max_value;
+    $: reactivePowerValue =
+        scaledReactivePower.unit !== reactivePowerUnit
+            ? scaledReactivePower.value
+            : reactivePowerDp
+              ? reactivePowerMetrics?.max_value?.toFixed(reactivePowerDp)
+              : reactivePowerMetrics?.max_value;
+    $: apparentPowerValue =
+        scaledApparentPower.unit !== apparentPowerUnit
+            ? scaledApparentPower.value
+            : apparentPowerDp
+              ? apparentPowerMetrics?.max_value?.toFixed(apparentPowerDp)
+              : apparentPowerMetrics?.max_value;
+
     $: if ($selectedLang)
         peakApparentPowerPeriod =
             apparentPowerMetrics?.max_value_start_time && apparentPowerMetrics?.max_value_end_time
@@ -286,10 +311,8 @@
             <InlineLoader loaded={!showLoader}>
                 <div class="value-div">
                     {#if apparentPowerMetrics?.max_value !== null && apparentPowerMetrics?.max_value !== undefined}
-                        <span class="value"
-                            >{apparentPowerDp ? apparentPowerMetrics?.max_value.toFixed(apparentPowerDp) : apparentPowerMetrics?.max_value}</span
-                        >
-                        <span class="unit">{apparentPowerUnit}</span>
+                        <span class="value">{apparentPowerValue}</span>
+                        <span class="unit">{scaledApparentPower.unit}</span>
                     {:else}
                         <span class="no-data-label">{$texts.noDataAvailableShort}</span>
                     {/if}
@@ -329,8 +352,8 @@
             <InlineLoader loaded={!showLoader}>
                 <div class="value-div">
                     {#if activePowerMetrics?.max_value !== null && activePowerMetrics?.max_value !== undefined}
-                        <span class="value">{activePowerDp ? activePowerMetrics?.max_value.toFixed(activePowerDp) : activePowerMetrics?.max_value}</span>
-                        <span class="unit">{activePowerUnit}</span>
+                        <span class="value">{activePowerValue}</span>
+                        <span class="unit">{scaledActivePower.unit}</span>
                     {:else}
                         <span class="no-data-label">{$texts.noDataAvailableShort}</span>
                     {/if}
@@ -370,10 +393,8 @@
             <InlineLoader loaded={!showLoader}>
                 <div class="value-div">
                     {#if reactivePowerMetrics?.max_value !== null && reactivePowerMetrics?.max_value !== undefined}
-                        <span class="value"
-                            >{reactivePowerDp ? reactivePowerMetrics?.max_value.toFixed(reactivePowerDp) : reactivePowerMetrics?.max_value}</span
-                        >
-                        <span class="unit">{reactivePowerUnit}</span>
+                        <span class="value">{reactivePowerValue}</span>
+                        <span class="unit">{scaledReactivePower.unit}</span>
                     {:else}
                         <span class="no-data-label">{$texts.noDataAvailableShort}</span>
                     {/if}
