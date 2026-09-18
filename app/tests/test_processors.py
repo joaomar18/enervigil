@@ -149,10 +149,8 @@ def test_counter_direct_mode_passes_raw_value_through():
     assert node.processor.value == 100
     node.processor.set_value(150)
     assert node.processor.value == 150
-    # NOTE: for DIRECT/DELTA modes, update_direction() is invoked with the delta
-    # rather than the new total (unlike __set_value_normal), so direction here
-    # reflects delta-vs-previous-total, not whether the counter is rising overall.
-    assert node.processor.negative_direction is True
+    assert node.processor.positive_direction is True
+    assert node.processor.negative_direction is False
 
 
 def test_counter_delta_mode_accumulates():
@@ -163,9 +161,8 @@ def test_counter_delta_mode_accumulates():
     assert node.processor.positive_direction is True
     node.processor.set_value(3)
     assert node.processor.value == 8
-    # See note above: direction compares the incoming delta (3) against the
-    # previous running total (5), not against the previous delta or zero.
-    assert node.processor.negative_direction is True
+    assert node.processor.positive_direction is True
+    assert node.processor.negative_direction is False
 
 
 def test_counter_cumulative_mode_tracks_delta_from_initial():
@@ -179,6 +176,38 @@ def test_counter_cumulative_mode_tracks_delta_from_initial():
     node.processor.set_value(140)
     assert node.processor.value == 40
     assert node.processor.negative_direction is True
+
+
+@pytest.mark.parametrize("node_type", [NodeType.INT, NodeType.FLOAT])
+@pytest.mark.parametrize("mode", [None, CounterMode.DIRECT, CounterMode.DELTA, CounterMode.CUMULATIVE])
+def test_direction_tracks_changes_and_preserves_direction_when_unchanged(node_type, mode):
+    node = make_node(type=node_type, is_counter=mode is not None, counter_mode=mode)
+    readings = [0, 50, 10, 0, -20, 0] if mode is CounterMode.DELTA else [100, 150, 160, 160, 140, 140]
+    directions = [(False, False), (True, False), (True, False), (True, False), (False, True), (False, True)]
+
+    for reading, expected in zip(readings, directions):
+        node.processor.set_value(reading)
+        assert (node.processor.positive_direction, node.processor.negative_direction) == expected
+
+    node.processor.set_value(None)
+    assert node.processor.value is None
+    assert node.processor.positive_direction is False
+    assert node.processor.negative_direction is False
+
+
+@pytest.mark.parametrize("reading,expected", [(150, (False, False)), (155, (True, False)), (145, (False, True))])
+@pytest.mark.parametrize("disconnected", [False, True])
+def test_cumulative_direction_uses_raw_readings_across_logging_reset(reading, expected, disconnected):
+    node = make_node(is_counter=True, counter_mode=CounterMode.CUMULATIVE)
+    node.processor.set_value(100)
+    node.processor.set_value(150)
+    node.processor.submit_log(datetime.now(timezone.utc))
+    if disconnected:
+        node.processor.set_value(None)
+
+    node.processor.set_value(reading)
+    assert node.processor.value == reading - 150
+    assert (node.processor.positive_direction, node.processor.negative_direction) == expected
 
 
 def test_counter_missing_mode_raises_value_error():

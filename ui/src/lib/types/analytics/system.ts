@@ -15,7 +15,9 @@
  * @property {number | null} total_ram - Total available system RAM (bytes)
  * @property {number | null} disk_usage - Amount of disk space currently in use (bytes)
  * @property {number | null} disk_total - Total available disk space (bytes)
- * @property {number | null} cpu_temp - CPU temperature in degrees Celsius
+ * @property {number | null} disk_read - Total bytes read since boot, or null if disk I/O is unavailable
+ * @property {number | null} disk_write - Total bytes written since boot, or null if disk I/O is unavailable
+ * @property {number | null} cpu_temperature - CPU temperature in degrees Celsius
  * @property {string | null} boot_date - System boot timestamp in ISO format
  */
 export interface RealTimeSystemData {
@@ -25,6 +27,8 @@ export interface RealTimeSystemData {
     total_ram: number | null;
     disk_usage: number | null;
     disk_total: number | null;
-    cpu_temp: number | null;
+    disk_read: number | null;
+    disk_write: number | null;
+    cpu_temperature: number | null;
     boot_date: string | null;
 }

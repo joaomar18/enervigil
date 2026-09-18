@@ -89,22 +89,19 @@ class NumericNodeProcessor(NodeProcessor[N]):
         self.positive_direction = False
         self.negative_direction = False
 
-    def update_direction(self, new_value: N) -> None:
+    def update_direction(self, delta: N) -> None:
         """
         Updates directional tracking flags based on value change.
 
         Args:
-            new_value (N): The new value to compare against the current value.
+            delta (N): The value change. Zero preserves the previous direction.
         """
 
-        if self.value is None:
-            return
-
-        if new_value > self.value:
+        if delta > self.ZERO:
             self.positive_direction = True
             self.negative_direction = False
 
-        elif new_value < self.value:
+        elif delta < self.ZERO:
             self.positive_direction = False
             self.negative_direction = True
 
@@ -149,6 +146,8 @@ class NumericNodeProcessor(NodeProcessor[N]):
         """
 
         if not super().prepare_set_value(value) or value is None:  # Node disabled or value is None
+            if self.config.enabled and value is None:
+                self.reset_direction()
             return
 
         if self.config.is_counter:
@@ -177,14 +176,14 @@ class NumericNodeProcessor(NodeProcessor[N]):
 
         if self.config.counter_mode is CounterMode.DIRECT:
             new_value = value
-            delta = new_value - current_value
+            delta = new_value - current_value if self.value is not None else self.ZERO
 
         elif self.config.counter_mode is CounterMode.DELTA:
             delta = value
             new_value = current_value + delta
         elif self.config.counter_mode is CounterMode.CUMULATIVE:
             new_value = value - self.initial_value
-            delta = new_value - current_value
+            delta = value - self._last_cumulative_value if self._last_cumulative_value is not None else self.ZERO
             self._last_cumulative_value = value
         else:
             raise ValueError(f"Counter mode is not valid: {self.config.counter_mode}")
@@ -200,7 +199,8 @@ class NumericNodeProcessor(NodeProcessor[N]):
             value (N): The measurement value from the device.
         """
 
-        self.update_direction(value)
+        if self.value is not None:
+            self.update_direction(value - self.value)
         self.value = value
         self.update_statistics(value)
         self.check_alarms(value)
