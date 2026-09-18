@@ -70,6 +70,7 @@ def calculate_energy(prefix: str, energy_type: str, node: Node, meter_nodes: Dic
         (power_node, power_value) = meter_util.get_numeric_node_with_value(f"{prefix}{energy_type}_power", meter_nodes)
 
         if power_value is None:
+            node.processor.last_source_power = None
             return
 
         power_timestamp = power_node.processor.timestamp
@@ -82,11 +83,17 @@ def calculate_energy(prefix: str, energy_type: str, node: Node, meter_nodes: Dic
         if power_timestamp is not None and power_timestamp == node.processor.last_source_timestamp:
             return
 
-        elapsed_hours = power_node.processor.elapsed_time / 3600.0 if power_node.processor.elapsed_time else 0.0
+        elapsed_seconds = power_node.processor.elapsed_time or 0.0
         scaled_power = calculation.get_scaled_value(power_value, power_node.config.unit)
-        scaled_value = calculation.apply_output_scaling(scaled_power * elapsed_hours, node.config.unit)
+        previous_power = node.processor.last_source_power
+        energy = 0.0
+        # The first sample (including after reconnecting) only establishes a baseline.
+        if previous_power is not None and elapsed_seconds > 0:
+            energy = (previous_power + scaled_power) / 2.0 * elapsed_seconds / 3600.0
+        scaled_value = calculation.apply_output_scaling(energy, node.config.unit)
         node.processor.set_value(scaled_value)
         node.processor.last_source_timestamp = power_timestamp
+        node.processor.last_source_power = scaled_power
 
 
 def calculate_power(prefix: str, power_type: str, node: Node, meter_nodes: Dict[str, Node]) -> None:

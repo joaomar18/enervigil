@@ -55,6 +55,8 @@ class NumericNodeProcessor(NodeProcessor[N]):
         # integration, used to avoid re-integrating the same sample when the
         # calculation is triggered more often than the source updates (e.g. MQTT).
         self.last_source_timestamp: Optional[int] = None
+        # Previous power in base units for trapezoidal integration; retained across logging resets.
+        self.last_source_power: Optional[float] = None
 
     def __init_subclass__(cls, **kw):
         if cls is not NumericNodeProcessor and "ZERO" not in cls.__dict__:

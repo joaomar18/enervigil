@@ -2,6 +2,7 @@
 
 import pytest
 import math
+from datetime import datetime, timezone
 
 #########################################
 
@@ -318,16 +319,85 @@ def test_cumulative_energy_missing_reverse_value_is_noop():
     assert target.processor.value is None
 
 
-def test_delta_energy_integrates_power_over_elapsed_time():
-    power = make_node("active_power", unit="W")
-    power.processor.set_value(1000)
-    # Simulate one elapsed hour since the processor's timestamp update; elapsed_time
-    # is normally derived from wall-clock time between set_value() calls.
-    power.processor.elapsed_time = 3600.0
+def make_energy_integrator(monkeypatch, power_unit="W", energy_unit="Wh", energy_type="active"):
+    power = make_node(f"{energy_type}_power", unit=power_unit)
+    target = make_node(f"{energy_type}_energy", unit=energy_unit, is_counter=True, counter_mode=CounterMode.DELTA)
+    clock = [0]
+    monkeypatch.setattr("controller.node.processor.processor.date.get_timestamp", lambda _: clock[0])
 
-    target = make_node("active_energy", unit="Wh", is_counter=True, counter_mode=CounterMode.DELTA)
+    def integrate(value, seconds):
+        clock[0] = int(seconds * 1000)
+        power.processor.set_value(value)
+        meter_calc.calculate_energy("", energy_type, target, {power.config.name: power}, EnergyMeterOptions())
+
+    return power, target, integrate
+
+
+@pytest.mark.parametrize("power_unit,energy_unit,first,second,seconds,expected", [
+    ("W", "Wh", 1000, 1000, 3600, 1000),
+    ("W", "Wh", 100, 200, 60, 2.5),
+    ("W", "Wh", 200, 100, 60, 2.5),
+    ("kW", "Wh", 0.1, 0.2, 60, 2.5),
+    ("W", "kWh", 1000, 2000, 3600, 1.5),
+    ("W", "Wh", -100, -200, 60, -2.5),
+    ("W", "Wh", -100, 100, 60, 0),
+])
+def test_delta_energy_integrates_average_power(monkeypatch, power_unit, energy_unit, first, second, seconds, expected):
+    _, target, integrate = make_energy_integrator(monkeypatch, power_unit, energy_unit)
+    integrate(first, 0)
+    assert target.processor.value == 0
+    integrate(second, seconds)
+    assert target.processor.value == pytest.approx(expected)
+
+
+def test_delta_energy_does_not_integrate_same_sample_twice(monkeypatch):
+    power, target, integrate = make_energy_integrator(monkeypatch)
+    integrate(100, 0)
+    integrate(200, 60)
     meter_calc.calculate_energy("", "active", target, {"active_power": power}, EnergyMeterOptions())
-    assert target.processor.value == pytest.approx(1000.0)  # 1000 W for 1 hour = 1000 Wh
+    assert target.processor.value == pytest.approx(2.5)
+    integrate(400, 180)  # A different interval length uses the new sample's elapsed time.
+    assert target.processor.value == pytest.approx(12.5)
+
+
+def test_delta_energy_preserves_previous_power_across_logging_reset(monkeypatch):
+    power, target, integrate = make_energy_integrator(monkeypatch)
+    integrate(100, 0)
+    integrate(200, 60)
+    assert target.processor.submit_log(datetime.now(timezone.utc))["value"] == pytest.approx(2.5)
+    power.processor.reset_value()
+    integrate(300, 120)
+    assert target.processor.value == pytest.approx(250 / 60)
+
+
+@pytest.mark.parametrize("calculate_while_disconnected", [False, True])
+def test_delta_energy_reconnect_starts_new_trapezoid(monkeypatch, calculate_while_disconnected):
+    power, target, integrate = make_energy_integrator(monkeypatch)
+    integrate(100, 0)
+    integrate(200, 60)
+    power.processor.set_value(None)
+    if calculate_while_disconnected:
+        meter_calc.calculate_energy("", "active", target, {"active_power": power}, EnergyMeterOptions())
+    integrate(500, 3600)
+    assert target.processor.value == pytest.approx(2.5)
+    integrate(700, 3660)
+    assert target.processor.value == pytest.approx(12.5)
+
+
+def test_delta_energy_ignores_negative_elapsed_time(monkeypatch):
+    _, target, integrate = make_energy_integrator(monkeypatch)
+    integrate(100, 60)
+    integrate(200, 30)
+    assert target.processor.value == 0
+    integrate(400, 90)
+    assert target.processor.value == pytest.approx(5)
+
+
+def test_delta_reactive_energy_uses_trapezoidal_integration(monkeypatch):
+    _, target, integrate = make_energy_integrator(monkeypatch, "var", "varh", "reactive")
+    integrate(100, 0)
+    integrate(200, 60)
+    assert target.processor.value == pytest.approx(2.5)
 
 
 ###############     P O W E R   F A C T O R     ###############
